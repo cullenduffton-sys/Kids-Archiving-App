@@ -13,6 +13,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
@@ -85,7 +86,6 @@
         .lightbox { animation: fadeIn 0.25s ease; }
         @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-        /* Loader */
         #loadingOverlay {
             position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99999; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -96,9 +96,26 @@
 </head>
 <body class="text-slate-800 h-[100dvh] overflow-hidden flex flex-col">
 
+    <div id="loginOverlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100000] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] border-4 border-indigo-400 shadow-[0_12px_0_rgb(129,140,248)] w-full max-w-sm p-8 text-center">
+            <div class="bg-indigo-500 text-white p-4 rounded-3xl shadow-md transform -rotate-6 inline-block mb-4">
+                <i class="fa-solid fa-palette text-4xl"></i>
+            </div>
+            <h2 class="text-3xl font-black text-slate-800 mb-1">ArtArchive</h2>
+            <p class="text-sm font-bold text-slate-400 mb-8">Family Access Only</p>
+            
+            <form id="loginForm" class="space-y-4">
+                <input type="email" id="loginEmail" placeholder="Email address" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 outline-none focus:border-indigo-400" required>
+                <input type="password" id="loginPassword" placeholder="Password" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 outline-none focus:border-indigo-400" required>
+                <button type="submit" id="loginBtn" class="btn-3d w-full bg-indigo-600 text-white font-black text-lg py-4 rounded-xl shadow-[0_6px_0_rgb(67,56,202)] mt-2">Unlock Archive 🔓</button>
+            </form>
+            <p id="loginError" class="text-red-500 font-bold text-sm mt-4 hidden"></p>
+        </div>
+    </div>
+
     <div id="loadingOverlay">
         <div class="spinner mb-4"></div>
-        <p class="font-bold text-slate-500" id="loadingText">Syncing with Firebase...</p>
+        <p class="font-bold text-slate-500" id="loadingText">Authenticating...</p>
     </div>
 
     <header class="bg-white/90 backdrop-blur-md shadow-sm px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center z-10 border-b-4 border-indigo-100 gap-3 md:gap-4 shrink-0">
@@ -129,10 +146,13 @@
                 <option value="alpha">A → Z</option>
             </select>
             <button onclick="openManageModal()" class="hidden md:flex btn-3d bg-slate-100 text-slate-600 hover:text-indigo-600 px-4 py-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)] font-bold items-center gap-2">
-                <i class="fa-solid fa-users-gear"></i> Family
+                <i class="fa-solid fa-users-gear"></i>
             </button>
             <button class="btn-3d bg-gradient-to-r from-pink-500 to-orange-400 text-white px-5 md:px-6 py-3 rounded-2xl shadow-[0_6px_0_rgb(219,39,119)] font-black text-sm md:text-lg flex-1 md:flex-none text-center" onclick="openUploadModal()">
-                ✨ Upload Art
+                ✨ Upload
+            </button>
+            <button onclick="logout()" class="btn-3d bg-slate-800 text-white px-4 py-3 rounded-xl shadow-[0_4px_0_rgb(30,41,59)] font-bold items-center gap-2" title="Sign Out">
+                <i class="fa-solid fa-right-from-bracket"></i>
             </button>
         </div>
     </header>
@@ -146,19 +166,6 @@
 
     <main class="flex-1 overflow-hidden flex flex-col p-3 md:p-6 max-w-7xl mx-auto w-full">
         <div class="smooth-scroll flex gap-3 mb-4 md:mb-6 overflow-x-auto no-scrollbar pb-3 pt-2 px-1 shrink-0" id="kidsTabs"></div>
-
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 text-white flex flex-col sm:flex-row justify-between items-center mb-4 md:mb-6 shadow-xl border-4 border-purple-300 transform transition hover:scale-[1.01] shrink-0">
-            <div class="flex items-center gap-3 md:gap-4 mb-3 sm:mb-0">
-                <div class="text-3xl md:text-4xl">🤖</div>
-                <div>
-                    <h3 class="font-black text-lg md:text-xl">AI Yearbook Agent</h3>
-                    <p class="text-xs md:text-sm font-semibold opacity-90">I'll automatically build your 2026 collage!</p>
-                </div>
-            </div>
-            <button class="bg-white text-indigo-700 px-5 py-2 rounded-xl text-sm md:text-md font-black shadow-lg opacity-50 cursor-not-allowed">
-                Generate Now
-            </button>
-        </div>
 
         <div id="mainScrollArea" class="smooth-scroll flex-1 overflow-y-auto px-1 pb-20 no-scrollbar">
             <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8"></div>
@@ -275,7 +282,7 @@
 
     <script>
         // ==========================================
-        // 🚨 FIREBASE CONFIGURATION GOES HERE 🚨
+        // FIREBASE CONFIGURATION
         // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyD9IKm0uyrZ5qQi74jQ-ahKtKaoHxruQ8A",
@@ -289,11 +296,57 @@
         
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
         const db = firebase.firestore();
         const storage = firebase.storage();
 
         // ==========================================
+        // AUTHENTICATION LOGIC
+        // ==========================================
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in.
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                loadDataFromFirebase();
+            } else {
+                // No user is signed in.
+                document.getElementById('loginOverlay').classList.remove('hidden');
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        });
 
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('loginBtn');
+            const errorTxt = document.getElementById('loginError');
+            
+            btn.innerText = 'Checking...';
+            btn.disabled = true;
+            errorTxt.classList.add('hidden');
+
+            auth.signInWithEmailAndPassword(email, pass)
+                .then(() => {
+                    btn.innerText = 'Unlock Archive 🔓';
+                    btn.disabled = false;
+                })
+                .catch((error) => {
+                    errorTxt.innerText = error.message;
+                    errorTxt.classList.remove('hidden');
+                    btn.innerText = 'Unlock Archive 🔓';
+                    btn.disabled = false;
+                });
+        });
+
+        function logout() {
+            auth.signOut();
+        }
+
+        // ==========================================
+        // APP LOGIC
+        // ==========================================
         const emojiCategories = {
             'People': ['👦','👧','👶','👱‍♂️','👱‍♀️','🧒','👩‍🦰','👨‍🦱','🧑','👸','🤴','🧙‍♂️','🧙‍♀️','🧚‍♀️','🧜‍♀️','🧛','🤠','🥸','🤓','😎'],
             'Heroes': ['🦸‍♂️','🦸‍♀️','🦹‍♂️','🦹‍♀️','🥷','🏋️','🧗','🤺','🏄','⚡'],
@@ -333,10 +386,12 @@
         let sortMode = 'newest';
 
         const defaultKids = [
-            { id: 'all', name: 'All', icon: '🌟', color: 'bg-slate-800', shadow: 'shadow-[0_4px_0_rgb(30,41,59)]', isBase: true }
+            { id: 'all', name: 'All', icon: '🌟', color: 'bg-slate-800', shadow: 'shadow-[0_4px_0_rgb(30,41,59)]', isBase: true },
+            { id: 'k_default1', name: 'Artist 1', age: 5, class: 'Pre-K', icon: '👧', color: 'bg-pink-500', shadow: 'shadow-[0_4px_0_rgb(190,24,93)]', isBase: false },
+            { id: 'k_default2', name: 'Artist 2', age: 3, class: 'Toddler', icon: '👦', color: 'bg-blue-500', shadow: 'shadow-[0_4px_0_rgb(29,78,216)]', isBase: false },
+            { id: 'k_default3', name: 'Artist 3', age: 1, class: 'Baby', icon: '👶', color: 'bg-emerald-500', shadow: 'shadow-[0_4px_0_rgb(4,120,87)]', isBase: false }
         ];
 
-        // --- FIREBASE DATA SYNC --- //
         async function loadDataFromFirebase() {
             try {
                 const kidsSnap = await db.collection('kids').get();
@@ -344,7 +399,7 @@
                     kids = kidsSnap.docs.map(doc => doc.data());
                 } else {
                     kids = [...defaultKids];
-                    kids.forEach(k => db.collection('kids').doc(k.id).set(k)); // Create defaults in DB
+                    kids.forEach(k => db.collection('kids').doc(k.id).set(k));
                 }
 
                 const artSnap = await db.collection('artworks').orderBy('id', 'desc').get();
@@ -354,7 +409,8 @@
                 updateAllUI();
             } catch (error) {
                 console.error("Error loading data:", error);
-                document.getElementById('loadingText').innerText = "Database connection error. Check config.";
+                document.getElementById('loadingText').innerText = "Permission Denied. Check your Database Rules.";
+                setTimeout(() => auth.signOut(), 3000);
             }
         }
 
@@ -366,9 +422,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('artDate').valueAsDate = new Date();
             renderEmojiGrid(); renderColorSwatches(); renderMoodPicker(); setupImagePreview();
-            
-            // Initiate Firebase Load
-            loadDataFromFirebase();
         });
 
         function updateAllUI() {
@@ -537,7 +590,6 @@
             select.innerHTML = actualKids.length === 0 ? `<option value="" disabled selected>Add a child first!</option>` : actualKids.map(k => `<option value="${k.name}">${k.icon} ${k.name} (Age: ${k.age})</option>`).join('');
         }
 
-        // --- FIREBASE IMAGE UPLOAD --- //
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault(); 
             const file = document.getElementById('artImage').files[0];
@@ -549,24 +601,20 @@
                 btn.innerText = "Uploading to Cloud... ⏳";
                 btn.disabled = true;
 
-                // Create a reference to 'artworks/filename' in Firebase Storage
                 const storageRef = storage.ref(`artworks/${Date.now()}_${file.name}`);
-                
-                // Upload file
                 const uploadTask = storageRef.put(file);
 
                 uploadTask.on('state_changed', 
-                    (snapshot) => { /* Could add progress bar here later */ }, 
+                    (snapshot) => { }, 
                     (error) => { alert("Upload failed: " + error.message); btn.innerText = "Save to Archive! 🚀"; btn.disabled = false; }, 
                     () => {
-                        // Success! Get the public URL.
                         uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
                             const newArt = { 
                                 id: Date.now(), 
                                 childName, 
                                 date: document.getElementById('artDate').value, 
                                 theme: document.getElementById('artTheme').value, 
-                                imageUrl: downloadURL, // The permanent Firebase URL
+                                imageUrl: downloadURL,
                                 mood: selectedMood,
                                 reactions: {},
                                 userReactions: [],
@@ -574,7 +622,7 @@
                             };
 
                             artworks.unshift(newArt);
-                            saveArtToDB(newArt); // Save doc to Firestore
+                            saveArtToDB(newArt);
                             
                             closeUploadModal();
                             setActiveTab(childName);
@@ -651,9 +699,8 @@
             if (editingKidId) {
                 const oldName = kids.find(k => k.id === editingKidId).name;
                 kids = kids.map(k => k.id === editingKidId ? { ...k, ...updatedData } : k);
-                saveKidToDB(kids.find(k => k.id === editingKidId)); // Save changes to DB
+                saveKidToDB(kids.find(k => k.id === editingKidId)); 
                 
-                // Update names on artworks in DB
                 artworks.forEach(art => {
                     if(art.childName === oldName) {
                         art.childName = name;
@@ -664,7 +711,7 @@
             } else { 
                 const newKid = { id: 'k_' + Date.now(), isBase: false, ...updatedData };
                 kids.push(newKid); 
-                saveKidToDB(newKid); // Save new kid to DB
+                saveKidToDB(newKid); 
             }
 
             cancelEdit(); updateAllUI();
@@ -676,7 +723,7 @@
                 kids = kids.filter(k => k.id !== id);
                 if(activeTab === kid.name) activeTab = 'All';
                 if(editingKidId === id) cancelEdit();
-                deleteKidFromDB(id); // Remove from DB
+                deleteKidFromDB(id); 
                 updateAllUI();
             }
         }
@@ -684,12 +731,6 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') { closeLightbox(); closeUploadModal(); closeManageModal(); }
         });
-    </script>
-    
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-      }
     </script>
 </body>
 </html>
