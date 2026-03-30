@@ -1,4 +1,4 @@
-<index.html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -11,6 +11,11 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap');
         body { 
@@ -79,9 +84,22 @@
         
         .lightbox { animation: fadeIn 0.25s ease; }
         @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+
+        /* Loader */
+        #loadingOverlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99999; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: #6366f1; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-slate-800 h-[100dvh] overflow-hidden flex flex-col">
+
+    <div id="loadingOverlay">
+        <div class="spinner mb-4"></div>
+        <p class="font-bold text-slate-500" id="loadingText">Syncing with Firebase...</p>
+    </div>
 
     <header class="bg-white/90 backdrop-blur-md shadow-sm px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center z-10 border-b-4 border-indigo-100 gap-3 md:gap-4 shrink-0">
         <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
@@ -182,7 +200,7 @@
                         <button type="button" onclick="clearImagePreview()" class="text-red-500 text-sm font-bold hover:underline">✕ Remove</button>
                     </div>
                 </div>
-                <button type="submit" class="btn-3d w-full bg-indigo-600 text-white font-black text-lg py-4 rounded-xl shadow-[0_6px_0_rgb(67,56,202)] mt-4">Save to Archive! 🚀</button>
+                <button type="submit" id="uploadBtn" class="btn-3d w-full bg-indigo-600 text-white font-black text-lg py-4 rounded-xl shadow-[0_6px_0_rgb(67,56,202)] mt-4">Save to Archive! 🚀</button>
             </form>
         </div>
     </div>
@@ -256,7 +274,26 @@
     </div>
 
     <script>
-        // --- EMOJI DATA --- //
+        // ==========================================
+        // 🚨 FIREBASE CONFIGURATION GOES HERE 🚨
+        // ==========================================
+        const firebaseConfig = {
+          apiKey: "AIzaSyD9IKm0uyrZ5qQi74jQ-ahKtKaoHxruQ8A",
+          authDomain: "artarchive-a853f.firebaseapp.com",
+          projectId: "artarchive-a853f",
+          storageBucket: "artarchive-a853f.firebasestorage.app",
+          messagingSenderId: "988485136427",
+          appId: "1:988485136427:web:82bf2a97e4cefd7ec27a6e",
+          measurementId: "G-2R4S0X7HKR"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // ==========================================
+
         const emojiCategories = {
             'People': ['👦','👧','👶','👱‍♂️','👱‍♀️','🧒','👩‍🦰','👨‍🦱','🧑','👸','🤴','🧙‍♂️','🧙‍♀️','🧚‍♀️','🧜‍♀️','🧛','🤠','🥸','🤓','😎'],
             'Heroes': ['🦸‍♂️','🦸‍♀️','🦹‍♂️','🦹‍♀️','🥷','🏋️','🧗','🤺','🏄','⚡'],
@@ -284,14 +321,6 @@
             { class: 'bg-rose-500', hex: '#f43f5e', shadow: 'shadow-[0_4px_0_rgb(190,18,60)]' },
         ];
 
-        // --- DATA STATE & PERSISTENCE --- //
-        const defaultKids = [
-            { id: 'all', name: 'All', icon: '🌟', color: 'bg-slate-800', shadow: 'shadow-[0_4px_0_rgb(30,41,59)]', isBase: true },
-            { id: 'k1', name: 'Isabel', age: '5', class: 'Orange', icon: '👧', color: 'bg-orange-500', shadow: 'shadow-[0_4px_0_rgb(194,65,12)]' },
-            { id: 'k2', name: 'Callum', age: '7', class: 'Blue', icon: '👦', color: 'bg-blue-500', shadow: 'shadow-[0_4px_0_rgb(29,78,216)]' },
-            { id: 'k3', name: 'Annebelle', age: '2', class: 'Babas bo', icon: '👶', color: 'bg-pink-500', shadow: 'shadow-[0_4px_0_rgb(190,24,93)]' }
-        ];
-
         let kids = [];
         let artworks = [];
         
@@ -303,108 +332,70 @@
         let searchQuery = '';
         let sortMode = 'newest';
 
-        // Load data from LocalStorage
-        function loadData() {
-            const savedKids = localStorage.getItem('artArchive_kids');
-            const savedArtworks = localStorage.getItem('artArchive_artworks');
-            
-            if (savedKids) {
-                kids = JSON.parse(savedKids);
-            } else {
-                kids = [...defaultKids];
-            }
-            
-            if (savedArtworks) {
-                artworks = JSON.parse(savedArtworks);
+        const defaultKids = [
+            { id: 'all', name: 'All', icon: '🌟', color: 'bg-slate-800', shadow: 'shadow-[0_4px_0_rgb(30,41,59)]', isBase: true }
+        ];
+
+        // --- FIREBASE DATA SYNC --- //
+        async function loadDataFromFirebase() {
+            try {
+                const kidsSnap = await db.collection('kids').get();
+                if (!kidsSnap.empty) {
+                    kids = kidsSnap.docs.map(doc => doc.data());
+                } else {
+                    kids = [...defaultKids];
+                    kids.forEach(k => db.collection('kids').doc(k.id).set(k)); // Create defaults in DB
+                }
+
+                const artSnap = await db.collection('artworks').orderBy('id', 'desc').get();
+                artworks = artSnap.docs.map(doc => doc.data());
+
+                document.getElementById('loadingOverlay').style.display = 'none';
+                updateAllUI();
+            } catch (error) {
+                console.error("Error loading data:", error);
+                document.getElementById('loadingText').innerText = "Database connection error. Check config.";
             }
         }
 
-        // Save data to LocalStorage
-        function saveData() {
-            localStorage.setItem('artArchive_kids', JSON.stringify(kids));
-            try {
-                localStorage.setItem('artArchive_artworks', JSON.stringify(artworks));
-            } catch (e) {
-                alert("Storage is full! Please delete some older artworks to make space.");
-            }
-        }
+        function saveKidToDB(kid) { db.collection('kids').doc(kid.id).set(kid); }
+        function deleteKidFromDB(kidId) { db.collection('kids').doc(kidId).delete(); }
+        function saveArtToDB(art) { db.collection('artworks').doc(art.id.toString()).set(art); }
+        function deleteArtFromDB(artId) { db.collection('artworks').doc(artId.toString()).delete(); }
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadData(); // Load saved data first!
             document.getElementById('artDate').valueAsDate = new Date();
-            renderEmojiGrid();
-            renderColorSwatches();
-            renderMoodPicker();
-            setupImagePreview();
-            updateAllUI();
+            renderEmojiGrid(); renderColorSwatches(); renderMoodPicker(); setupImagePreview();
+            
+            // Initiate Firebase Load
+            loadDataFromFirebase();
         });
 
         function updateAllUI() {
-            renderTabs();
-            renderGallery();
-            renderUploadDropdown();
-            renderManageList();
+            renderTabs(); renderGallery(); renderUploadDropdown(); renderManageList();
         }
 
-        // --- IMAGE COMPRESSION (Crucial for LocalStorage) --- //
-        function compressImage(base64Str, callback) {
-            const img = new Image();
-            img.src = base64Str;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800; // Resizes large photos to 800px max
-                let width = img.width;
-                let height = img.height;
-                
-                if (width > MAX_WIDTH) {
-                    height = Math.round((height * MAX_WIDTH) / width);
-                    width = MAX_WIDTH;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                // Compresses to a JPEG with 70% quality to save space
-                callback(canvas.toDataURL('image/jpeg', 0.7)); 
-            };
-        }
-
-        // --- SEARCH & SORT --- //
         function toggleSearch() {
-            const el = document.getElementById('mobileSearch');
-            el.classList.toggle('hidden');
+            const el = document.getElementById('mobileSearch'); el.classList.toggle('hidden');
             if (!el.classList.contains('hidden')) document.getElementById('mobileSearchInput').focus();
         }
 
         function handleSearch() {
-            const desktopVal = document.getElementById('searchInput')?.value || '';
-            const mobileVal = document.getElementById('mobileSearchInput')?.value || '';
-            searchQuery = (desktopVal || mobileVal).toLowerCase().trim();
+            searchQuery = (document.getElementById('searchInput')?.value || document.getElementById('mobileSearchInput')?.value || '').toLowerCase().trim();
             if (document.getElementById('searchInput')) document.getElementById('searchInput').value = searchQuery;
             if (document.getElementById('mobileSearchInput')) document.getElementById('mobileSearchInput').value = searchQuery;
             renderGallery();
         }
 
-        function handleSort() {
-            sortMode = document.getElementById('sortSelector').value;
-            renderGallery();
-        }
+        function handleSort() { sortMode = document.getElementById('sortSelector').value; renderGallery(); }
 
-        // --- EMOJI GRID --- //
         function renderEmojiGrid(filter = '') {
-            const grid = document.getElementById('emojiGrid');
-            let html = '';
+            const grid = document.getElementById('emojiGrid'); let html = '';
             for (const cat in emojiCategories) {
-                const filtered = emojiCategories[cat].filter(e => {
-                    if (!filter) return true;
-                    return cat.toLowerCase().includes(filter.toLowerCase());
-                });
+                const filtered = emojiCategories[cat].filter(e => { if (!filter) return true; return cat.toLowerCase().includes(filter.toLowerCase()); });
                 if (filtered.length === 0) continue;
                 html += `<div class="col-span-6 sm:col-span-8 text-xs font-black text-slate-400 uppercase tracking-wider pt-2 pb-1 px-1">${cat}</div>`;
-                filtered.forEach(emoji => {
-                    html += `<div class="emoji-grid-item ${selectedEmoji === emoji ? 'selected' : ''}" onclick="selectEmoji('${emoji}')">${emoji}</div>`;
-                });
+                filtered.forEach(emoji => { html += `<div class="emoji-grid-item ${selectedEmoji === emoji ? 'selected' : ''}" onclick="selectEmoji('${emoji}')">${emoji}</div>`; });
             }
             if (!html) html = '<div class="col-span-6 sm:col-span-8 text-center text-slate-400 font-bold py-4">No emojis found</div>';
             grid.innerHTML = html;
@@ -413,21 +404,18 @@
         function filterEmojis() { renderEmojiGrid(document.getElementById('emojiSearch').value); }
         function selectEmoji(emoji) { selectedEmoji = emoji; document.getElementById('newKidEmoji').value = emoji; renderEmojiGrid(document.getElementById('emojiSearch').value); }
 
-        // --- COLOR SWATCHES --- //
         function renderColorSwatches() {
             const container = document.getElementById('colorSwatches');
             container.innerHTML = colorOptions.map(c => `<div class="color-swatch ${c.class === selectedColor ? 'selected' : ''}" style="background-color: ${c.hex}" onclick="selectColor('${c.class}')"></div>`).join('');
         }
         function selectColor(colorClass) { selectedColor = colorClass; document.getElementById('newKidColor').value = colorClass; renderColorSwatches(); }
 
-        // --- MOOD PICKER --- //
         function renderMoodPicker() {
             const container = document.getElementById('moodPicker');
             container.innerHTML = moodEmojis.map(m => `<button type="button" class="reaction-btn text-xl p-1.5 rounded-lg border-2 border-transparent ${selectedMood === m ? 'active' : ''}" onclick="selectMood('${m}')">${m}</button>`).join('');
         }
         function selectMood(m) { selectedMood = selectedMood === m ? '' : m; renderMoodPicker(); }
 
-        // --- IMAGE PREVIEW --- //
         function setupImagePreview() {
             document.getElementById('artImage').addEventListener('change', function() {
                 if (this.files && this.files[0]) {
@@ -444,7 +432,6 @@
         }
         function clearImagePreview() { document.getElementById('artImage').value = ''; document.getElementById('dropZoneContent').classList.remove('hidden'); document.getElementById('imagePreview').classList.add('hidden'); document.getElementById('imagePreview').classList.remove('flex'); }
 
-        // --- TABS --- //
         function renderTabs() {
             const tabsContainer = document.getElementById('kidsTabs');
             tabsContainer.innerHTML = kids.map(kid => {
@@ -458,7 +445,6 @@
         }
         function setActiveTab(name) { activeTab = name; renderTabs(); renderGallery(); }
 
-        // --- GALLERY --- //
         function renderGallery() {
             const gallery = document.getElementById('galleryGrid');
             let filteredArt = activeTab === 'All' ? [...artworks] : artworks.filter(art => art.childName === activeTab);
@@ -484,7 +470,7 @@
                 return `
                 <div class="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-slate-100 p-2.5 md:p-3 shadow-lg hover:-translate-y-1 transition group card-enter" style="animation-delay: ${index * 0.05}s">
                     <div class="h-44 md:h-56 overflow-hidden rounded-xl md:rounded-2xl bg-slate-100 relative border-2 border-slate-100 cursor-pointer" onclick="openLightbox(${art.id})">
-                        <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 loading="lazy"">
                         ${art.mood ? `<div class="absolute top-2 left-2 text-2xl bg-white/80 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">${art.mood}</div>` : ''}
                         <div class="absolute top-2 right-2">
                             <button onclick="event.stopPropagation(); toggleFavorite(${art.id})" class="fav-star text-2xl ${isFav ? 'active' : 'text-white/60 hover:text-amber-400'} drop-shadow-lg">${isFav ? '⭐' : '☆'}</button>
@@ -513,15 +499,13 @@
             }).join('');
         }
 
-        // --- INTERACTIONS --- //
         function toggleReaction(artId, emoji, event) {
             event.stopPropagation(); const art = artworks.find(a => a.id === artId); if (!art) return;
             if (!art.reactions) art.reactions = {}; if (!art.userReactions) art.userReactions = [];
             const idx = art.userReactions.indexOf(emoji);
             if (idx > -1) { art.userReactions.splice(idx, 1); art.reactions[emoji] = Math.max(0, (art.reactions[emoji] || 0) - 1); if (art.reactions[emoji] === 0) delete art.reactions[emoji]; } 
             else { art.userReactions.push(emoji); art.reactions[emoji] = (art.reactions[emoji] || 0) + 1; spawnFlyEmoji(event, emoji); }
-            saveData(); // Save permanent state
-            renderGallery();
+            saveArtToDB(art); renderGallery();
         }
 
         function spawnFlyEmoji(event, emoji) {
@@ -532,9 +516,7 @@
 
         function toggleFavorite(artId) {
             const art = artworks.find(a => a.id === artId); if (!art) return;
-            art.favorite = !art.favorite;
-            saveData(); // Save permanent state
-            renderGallery();
+            art.favorite = !art.favorite; saveArtToDB(art); renderGallery();
         }
 
         function openLightbox(artId) {
@@ -547,15 +529,15 @@
         }
         function closeLightbox() { document.getElementById('lightboxModal').classList.add('hidden'); }
 
-        // --- UPLOAD LOGIC --- //
         function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
-        function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); document.getElementById('uploadForm').reset(); selectedMood = ''; renderMoodPicker(); clearImagePreview(); }
+        function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); document.getElementById('uploadForm').reset(); selectedMood = ''; renderMoodPicker(); clearImagePreview(); document.getElementById('uploadBtn').innerText = "Save to Archive! 🚀"; }
 
         function renderUploadDropdown() {
             const select = document.getElementById('childSelect'); const actualKids = kids.filter(k => !k.isBase);
             select.innerHTML = actualKids.length === 0 ? `<option value="" disabled selected>Add a child first!</option>` : actualKids.map(k => `<option value="${k.name}">${k.icon} ${k.name} (Age: ${k.age})</option>`).join('');
         }
 
+        // --- FIREBASE IMAGE UPLOAD --- //
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault(); 
             const file = document.getElementById('artImage').files[0];
@@ -563,48 +545,56 @@
             if (!childName) return alert("Please add a child profile first!");
             
             if (file) {
-                // Read the file into memory
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = function(event) {
-                    const rawBase64 = event.target.result;
-                    
-                    // Compress the image before saving so LocalStorage doesn't crash!
-                    compressImage(rawBase64, function(compressedBase64) {
-                        artworks.unshift({ 
-                            id: Date.now(), 
-                            childName, 
-                            date: document.getElementById('artDate').value, 
-                            theme: document.getElementById('artTheme').value, 
-                            imageUrl: compressedBase64, // Saved permanently!
-                            mood: selectedMood,
-                            reactions: {},
-                            userReactions: [],
-                            favorite: false
+                const btn = document.getElementById('uploadBtn');
+                btn.innerText = "Uploading to Cloud... ⏳";
+                btn.disabled = true;
+
+                // Create a reference to 'artworks/filename' in Firebase Storage
+                const storageRef = storage.ref(`artworks/${Date.now()}_${file.name}`);
+                
+                // Upload file
+                const uploadTask = storageRef.put(file);
+
+                uploadTask.on('state_changed', 
+                    (snapshot) => { /* Could add progress bar here later */ }, 
+                    (error) => { alert("Upload failed: " + error.message); btn.innerText = "Save to Archive! 🚀"; btn.disabled = false; }, 
+                    () => {
+                        // Success! Get the public URL.
+                        uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                            const newArt = { 
+                                id: Date.now(), 
+                                childName, 
+                                date: document.getElementById('artDate').value, 
+                                theme: document.getElementById('artTheme').value, 
+                                imageUrl: downloadURL, // The permanent Firebase URL
+                                mood: selectedMood,
+                                reactions: {},
+                                userReactions: [],
+                                favorite: false
+                            };
+
+                            artworks.unshift(newArt);
+                            saveArtToDB(newArt); // Save doc to Firestore
+                            
+                            closeUploadModal();
+                            setActiveTab(childName);
+                            btn.disabled = false;
+                            
+                            setTimeout(() => { document.getElementById('mainScrollArea').scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
                         });
-                        
-                        saveData(); // Commit to LocalStorage
-                        closeUploadModal();
-                        setActiveTab(childName);
-                        
-                        // Automatically scroll to the top of the gallery!
-                        setTimeout(() => {
-                            document.getElementById('mainScrollArea').scrollTo({ top: 0, behavior: 'smooth' });
-                        }, 50);
-                    });
-                };
+                    }
+                );
             }
         });
 
         function deleteArt(id) { 
             if(confirm("Delete this masterpiece? 🗑️")) { 
                 artworks = artworks.filter(a => a.id !== id); 
-                saveData(); // Save permanent state
+                deleteArtFromDB(id);
                 renderGallery(); 
             } 
         }
 
-        // --- MANAGE FAMILY LOGIC --- //
         function openManageModal() { document.getElementById('manageModal').classList.remove('hidden'); }
         function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); cancelEdit(); }
 
@@ -656,17 +646,27 @@
             e.preventDefault();
             const name = document.getElementById('newKidName').value.trim(); const colorClass = document.getElementById('newKidColor').value;
             const colorObj = colorOptions.find(c => c.class === colorClass); const shadow = colorObj ? colorObj.shadow : 'shadow-[0_4px_0_rgb(71,85,105)]';
-
             const updatedData = { name: name, age: document.getElementById('newKidAge').value.trim(), class: document.getElementById('newKidClass').value.trim(), icon: document.getElementById('newKidEmoji').value, color: colorClass, shadow: shadow };
 
             if (editingKidId) {
                 const oldName = kids.find(k => k.id === editingKidId).name;
                 kids = kids.map(k => k.id === editingKidId ? { ...k, ...updatedData } : k);
-                artworks = artworks.map(art => art.childName === oldName ? { ...art, childName: name } : art);
+                saveKidToDB(kids.find(k => k.id === editingKidId)); // Save changes to DB
+                
+                // Update names on artworks in DB
+                artworks.forEach(art => {
+                    if(art.childName === oldName) {
+                        art.childName = name;
+                        saveArtToDB(art);
+                    }
+                });
                 if (activeTab === oldName) activeTab = name; 
-            } else { kids.push({ id: 'k_' + Date.now(), isBase: false, ...updatedData }); }
+            } else { 
+                const newKid = { id: 'k_' + Date.now(), isBase: false, ...updatedData };
+                kids.push(newKid); 
+                saveKidToDB(newKid); // Save new kid to DB
+            }
 
-            saveData(); // Save permanent state
             cancelEdit(); updateAllUI();
         });
 
@@ -676,7 +676,7 @@
                 kids = kids.filter(k => k.id !== id);
                 if(activeTab === kid.name) activeTab = 'All';
                 if(editingKidId === id) cancelEdit();
-                saveData(); // Save permanent state
+                deleteKidFromDB(id); // Remove from DB
                 updateAllUI();
             }
         }
