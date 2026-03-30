@@ -1,13 +1,12 @@
 <index.html>
 <html lang="en">
 <head>
-    <link rel="apple-touch-icon" href="apple-icon.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ArtArchive | Kids Artwork Tracker</title>
     
     <link rel="manifest" href="./manifest.json">
-    <link rel="apple-touch-icon" href="./icon-192.png?v=2">
+    <link rel="apple-touch-icon" href="apple-icon.png">
     <meta name="theme-color" content="#6366f1">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,9 +16,18 @@
         body { 
             font-family: 'Nunito', sans-serif; 
             background-color: #f8fafc;
-            background-image: radial-gradient(#cbd5e1 2px, transparent 2px);
+            background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
             background-size: 30px 30px;
+            /* Prevents pull-to-refresh on mobile */
+            overscroll-behavior-y: none; 
         }
+        
+        /* Smooth Momentum Scrolling for iOS */
+        .smooth-scroll {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+
         .btn-3d { transition: all 0.1s ease; }
         .btn-3d:active {
             transform: translateY(4px);
@@ -27,63 +35,201 @@
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Interactive UI Elements */
+        .emoji-grid-item {
+            transition: all 0.15s ease;
+            cursor: pointer;
+            border: 3px solid transparent;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            padding: 6px;
+            background: white;
+        }
+        .emoji-grid-item:hover {
+            transform: scale(1.25);
+            background: #eef2ff;
+            border-color: #a5b4fc;
+            z-index: 2;
+        }
+        .emoji-grid-item.selected {
+            border-color: #6366f1;
+            background: #e0e7ff;
+            transform: scale(1.15);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.3);
+        }
+        
+        .color-swatch {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 3px solid transparent;
+            position: relative;
+        }
+        .color-swatch:hover { transform: scale(1.2); }
+        .color-swatch.selected {
+            border-color: #1e293b;
+            transform: scale(1.15);
+            box-shadow: 0 0 0 3px rgba(30,41,59,0.2);
+        }
+        .color-swatch.selected::after {
+            content: '✓';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 900;
+            font-size: 14px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .reaction-btn {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+        .reaction-btn:hover { transform: scale(1.3); }
+        .reaction-btn:active { transform: scale(0.9); }
+        .reaction-btn.active {
+            background: #e0e7ff;
+            border-color: #818cf8;
+        }
+        
+        .reaction-fly {
+            position: fixed;
+            pointer-events: none;
+            font-size: 2rem;
+            z-index: 9999;
+            animation: flyUp 0.8s ease-out forwards;
+        }
+        @keyframes flyUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+        
+        .card-enter { animation: cardPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes cardPop {
+            0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        .empty-bounce { animation: gentleBounce 2s ease-in-out infinite; }
+        @keyframes gentleBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .tab-count {
+            background: rgba(255,255,255,0.3);
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-weight: 800;
+        }
+        
+        .fav-star { transition: all 0.2s ease; }
+        .fav-star:hover { transform: scale(1.3); }
+        .fav-star.active {
+            color: #f59e0b;
+            animation: starPop 0.3s ease;
+        }
+        @keyframes starPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+        
+        .preview-img {
+            max-height: 120px;
+            border-radius: 16px;
+            object-fit: cover;
+            border: 3px solid #e2e8f0;
+        }
+        
+        .lightbox { animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
-<body class="text-slate-800 h-screen overflow-hidden flex flex-col">
+<body class="text-slate-800 h-[100dvh] overflow-hidden flex flex-col">
 
-    <header class="bg-white/90 backdrop-blur-md shadow-sm px-6 py-4 flex flex-col md:flex-row justify-between items-center z-10 border-b-4 border-indigo-100 gap-4 shrink-0">
+    <header class="bg-white/90 backdrop-blur-md shadow-sm px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center z-10 border-b-4 border-indigo-100 gap-3 md:gap-4 shrink-0">
         <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
             <div class="flex items-center gap-3">
                 <div class="bg-indigo-500 text-white p-3 rounded-2xl shadow-md transform -rotate-6">
                     <i class="fa-solid fa-palette text-2xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-black text-indigo-700 tracking-tight">ArtArchive</h1>
-                    <p class="text-sm font-bold text-slate-400">The Family Gallery</p>
+                    <h1 class="text-2xl md:text-3xl font-black text-indigo-700 tracking-tight">ArtArchive</h1>
+                    <p class="text-xs md:text-sm font-bold text-slate-400">The Family Gallery</p>
                 </div>
             </div>
-            <button onclick="openManageModal()" class="md:hidden text-slate-500 hover:text-indigo-600 text-xl"><i class="fa-solid fa-users-gear"></i></button>
+            <div class="flex items-center gap-2 md:hidden">
+                <button onclick="toggleSearch()" class="text-slate-500 hover:text-indigo-600 text-lg p-2"><i class="fa-solid fa-search"></i></button>
+                <button onclick="openManageModal()" class="text-slate-500 hover:text-indigo-600 text-lg p-2"><i class="fa-solid fa-users-gear"></i></button>
+            </div>
         </div>
         
-        <div class="flex gap-4 items-center w-full md:w-auto">
-            <select id="yearSelector" class="bg-slate-100 border-2 border-slate-200 rounded-xl px-3 py-3 text-sm md:text-lg font-bold text-slate-700 outline-none cursor-pointer hover:border-indigo-400 transition hidden sm:block">
-                <option value="2026">Year: 2026</option>
-                <option value="2027">Year: 2027</option>
+        <div class="flex gap-3 items-center w-full md:w-auto">
+            <div class="relative hidden md:block">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Search art..." class="bg-slate-100 border-2 border-slate-200 rounded-xl pl-9 pr-3 py-3 text-sm font-bold text-slate-700 outline-none w-40 focus:border-indigo-400 transition focus:w-56">
+            </div>
+            <select id="sortSelector" onchange="handleSort()" class="bg-slate-100 border-2 border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 outline-none cursor-pointer hover:border-indigo-400 transition hidden sm:block">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="alpha">A → Z</option>
             </select>
             <button onclick="openManageModal()" class="hidden md:flex btn-3d bg-slate-100 text-slate-600 hover:text-indigo-600 px-4 py-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)] font-bold items-center gap-2">
                 <i class="fa-solid fa-users-gear"></i> Family
             </button>
-            <button class="btn-3d bg-gradient-to-r from-pink-500 to-orange-400 text-white px-6 py-3 rounded-2xl shadow-[0_6px_0_rgb(219,39,119)] font-black text-md md:text-lg flex-1 md:flex-none text-center" onclick="openUploadModal()">
+            <button class="btn-3d bg-gradient-to-r from-pink-500 to-orange-400 text-white px-5 md:px-6 py-3 rounded-2xl shadow-[0_6px_0_rgb(219,39,119)] font-black text-sm md:text-lg flex-1 md:flex-none text-center" onclick="openUploadModal()">
                 ✨ Upload Art
             </button>
         </div>
     </header>
 
-    <main class="flex-1 overflow-hidden flex flex-col p-4 md:p-6 max-w-7xl mx-auto w-full">
-        <div class="flex gap-4 mb-6 overflow-x-auto no-scrollbar pb-4 pt-2 px-2 shrink-0" id="kidsTabs"></div>
+    <div id="mobileSearch" class="hidden bg-white px-4 py-2 border-b-2 border-slate-100 md:hidden shrink-0">
+        <div class="relative">
+            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="mobileSearchInput" oninput="handleSearch()" placeholder="Search artwork..." class="w-full bg-slate-100 border-2 border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 transition">
+        </div>
+    </div>
 
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[2rem] p-5 text-white flex flex-col sm:flex-row justify-between items-center mb-6 shadow-xl border-4 border-purple-300 transform transition hover:scale-[1.01] shrink-0">
-            <div class="flex items-center gap-4 mb-4 sm:mb-0">
-                <div class="text-4xl">🤖</div>
+    <main class="flex-1 overflow-hidden flex flex-col p-3 md:p-6 max-w-7xl mx-auto w-full">
+        <div class="smooth-scroll flex gap-3 mb-4 md:mb-6 overflow-x-auto no-scrollbar pb-3 pt-2 px-1 shrink-0" id="kidsTabs"></div>
+
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 text-white flex flex-col sm:flex-row justify-between items-center mb-4 md:mb-6 shadow-xl border-4 border-purple-300 transform transition hover:scale-[1.01] shrink-0">
+            <div class="flex items-center gap-3 md:gap-4 mb-3 sm:mb-0">
+                <div class="text-3xl md:text-4xl">🤖</div>
                 <div>
-                    <h3 class="font-black text-xl">AI Yearbook Agent</h3>
-                    <p class="text-sm md:text-md font-semibold opacity-90">I'll automatically build your 2026 collage!</p>
+                    <h3 class="font-black text-lg md:text-xl">AI Yearbook Agent</h3>
+                    <p class="text-xs md:text-sm font-semibold opacity-90">I'll automatically build your 2026 collage!</p>
                 </div>
             </div>
-            <button class="bg-white text-indigo-700 px-6 py-2 rounded-xl text-md font-black shadow-lg opacity-50 cursor-not-allowed">
+            <button class="bg-white text-indigo-700 px-5 py-2 rounded-xl text-sm md:text-md font-black shadow-lg opacity-50 cursor-not-allowed">
                 Generate Now
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-2 pb-20 no-scrollbar">
-            <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"></div>
+        <div class="smooth-scroll flex-1 overflow-y-auto px-1 pb-20 no-scrollbar">
+            <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8"></div>
         </div>
     </main>
 
     <div id="uploadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeUploadModal()"></div>
-        <div class="relative bg-white rounded-[2rem] border-4 border-indigo-400 shadow-[0_12px_0_rgb(129,140,248)] w-full max-w-md p-6 md:p-8 z-10 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-6">
+        <div class="smooth-scroll relative bg-white rounded-[2rem] border-4 border-indigo-400 shadow-[0_12px_0_rgb(129,140,248)] w-full max-w-md p-5 md:p-8 z-10 max-h-[90dvh] overflow-y-auto overscroll-contain">
+            <div class="flex justify-between items-center mb-5">
                 <h2 class="text-2xl font-black text-slate-800">🎨 New Art</h2>
                 <button onclick="closeUploadModal()" class="text-slate-400 hover:text-pink-500 bg-slate-100 rounded-full w-10 h-10 flex items-center justify-center"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
@@ -100,8 +246,20 @@
                     <label class="block font-bold text-slate-700 mb-2">Theme / Title</label>
                     <input type="text" id="artTheme" placeholder="e.g., Space Aliens!" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 outline-none" required>
                 </div>
-                <div class="bg-indigo-50 p-4 rounded-2xl border-2 border-dashed border-indigo-300">
-                    <input type="file" id="artImage" accept="image/*" capture="environment" class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-black file:bg-indigo-600 file:text-white cursor-pointer" required>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-2">Mood Emoji <span class="text-slate-400 font-normal text-sm">(optional)</span></label>
+                    <div class="flex gap-2 flex-wrap" id="moodPicker"></div>
+                </div>
+                <div class="bg-indigo-50 p-4 rounded-2xl border-2 border-dashed border-indigo-300 text-center" id="dropZone">
+                    <div id="dropZoneContent">
+                        <div class="text-4xl mb-2">📷</div>
+                        <p class="text-sm font-bold text-indigo-500 mb-2">Tap to pick or drag & drop</p>
+                        <input type="file" id="artImage" accept="image/*" capture="environment" class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-black file:bg-indigo-600 file:text-white cursor-pointer" required>
+                    </div>
+                    <div id="imagePreview" class="hidden flex-col items-center gap-2">
+                        <img id="previewImg" class="preview-img w-full" />
+                        <button type="button" onclick="clearImagePreview()" class="text-red-500 text-sm font-bold hover:underline">✕ Remove</button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-3d w-full bg-indigo-600 text-white font-black text-lg py-4 rounded-xl shadow-[0_6px_0_rgb(67,56,202)] mt-4">Save to Archive! 🚀</button>
             </form>
@@ -110,7 +268,7 @@
 
     <div id="manageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeManageModal()"></div>
-        <div class="relative bg-white rounded-[2rem] border-4 border-emerald-400 shadow-[0_12px_0_rgb(52,211,153)] w-full max-w-lg p-6 md:p-8 z-10 max-h-[90vh] overflow-y-auto">
+        <div class="smooth-scroll relative bg-white rounded-[2rem] border-4 border-emerald-400 shadow-[0_12px_0_rgb(52,211,153)] w-full max-w-lg p-5 md:p-8 z-10 max-h-[90dvh] overflow-y-auto overscroll-contain">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-black text-slate-800">👨‍👩‍👧‍👦 Manage Family</h2>
                 <button onclick="closeManageModal()" class="text-slate-400 hover:text-red-500 bg-slate-100 rounded-full w-10 h-10 flex items-center justify-center"><i class="fa-solid fa-times text-xl"></i></button>
@@ -118,51 +276,42 @@
             
             <div class="mb-8">
                 <h3 class="font-bold text-slate-500 mb-3 text-sm uppercase tracking-wider">Current Roster</h3>
-                <div id="manageKidsList" class="space-y-3">
-                    </div>
+                <div id="manageKidsList" class="space-y-3"></div>
             </div>
 
-            <div class="bg-slate-50 p-5 rounded-2xl border-2 border-slate-200 transition-colors" id="formContainer">
+            <div class="bg-slate-50 p-5 rounded-2xl border-2 border-slate-200 transition-all duration-300" id="formContainer">
                 <h3 class="font-black text-lg text-slate-800 mb-4" id="formTitle">➕ Add New Kid</h3>
                 <form id="addKidForm" class="space-y-4">
-                    <div class="flex gap-4">
-                        <div class="flex-1">
-                            <input type="text" id="newKidName" placeholder="Name (e.g. Leo)" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2 font-bold outline-none" required>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-[2]">
+                            <label class="block font-bold text-slate-500 text-xs mb-1">Name</label>
+                            <input type="text" id="newKidName" placeholder="e.g. Leo" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2.5 font-bold outline-none focus:border-indigo-400 transition" required>
                         </div>
                         <div class="flex-1">
-                            <input type="text" id="newKidClass" placeholder="Class (e.g. Red)" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2 font-bold outline-none" required>
+                            <label class="block font-bold text-slate-500 text-xs mb-1">Age</label>
+                            <input type="number" id="newKidAge" placeholder="e.g. 5" min="0" max="99" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2.5 font-bold outline-none focus:border-indigo-400 transition" required>
+                        </div>
+                        <div class="flex-[2]">
+                            <label class="block font-bold text-slate-500 text-xs mb-1">Class</label>
+                            <input type="text" id="newKidClass" placeholder="e.g. Red" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2.5 font-bold outline-none focus:border-indigo-400 transition" required>
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block font-bold text-slate-500 text-sm mb-2">Pick an Emoji:</label>
-                        <select id="newKidEmoji" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2 text-xl outline-none bg-white cursor-pointer">
-                            <option value="👦">👦 Boy</option>
-                            <option value="👧">👧 Girl</option>
-                            <option value="👶">👶 Baby</option>
-                            <option value="🦸‍♂️">🦸‍♂️ Superhero</option>
-                            <option value="🦸‍♀️">🦸‍♀️ Supergirl</option>
-                            <option value="🥷">🥷 Ninja</option>
-                            <option value="🦖">🦖 Dino</option>
-                            <option value="🦄">🦄 Unicorn</option>
-                            <option value="🦊">🦊 Fox</option>
-                            <option value="🚀">🚀 Rocket</option>
-                        </select>
+                        <label class="block font-bold text-slate-500 text-sm mb-2">Pick an Avatar:</label>
+                        <div class="relative mb-2">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="emojiSearch" oninput="filterEmojis()" placeholder="Search emojis..." class="w-full border-2 border-slate-200 rounded-xl pl-8 pr-3 py-2 text-sm font-bold outline-none focus:border-indigo-400 bg-white">
+                        </div>
+                        <div class="smooth-scroll grid grid-cols-6 sm:grid-cols-8 gap-1.5 max-h-40 overflow-y-auto p-2 bg-white border-2 border-slate-200 rounded-xl no-scrollbar" id="emojiGrid"></div>
+                        <input type="hidden" id="newKidEmoji" value="👦">
                     </div>
 
                     <div>
                         <label class="block font-bold text-slate-500 text-sm mb-2">Pick a Theme Color:</label>
-                        <select id="newKidColor" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2 font-bold outline-none bg-white cursor-pointer">
-                            <option value="bg-red-500" class="text-red-500">Red</option>
-                            <option value="bg-orange-500" class="text-orange-500">Orange</option>
-                            <option value="bg-amber-500" class="text-amber-500">Yellow</option>
-                            <option value="bg-emerald-500" class="text-emerald-500">Green</option>
-                            <option value="bg-cyan-500" class="text-cyan-500">Cyan</option>
-                            <option value="bg-blue-500" class="text-blue-500">Blue</option>
-                            <option value="bg-purple-500" class="text-purple-500">Purple</option>
-                            <option value="bg-pink-500" class="text-pink-500">Pink</option>
-                            <option value="bg-rose-500" class="text-rose-500">Rose</option>
-                        </select>
+                        <div class="flex gap-2 flex-wrap" id="colorSwatches"></div>
+                        <input type="hidden" id="newKidColor" value="bg-red-500">
                     </div>
 
                     <div class="flex gap-3 pt-2">
@@ -174,20 +323,70 @@
         </div>
     </div>
 
+    <div id="lightboxModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-md" onclick="closeLightbox()"></div>
+        <div class="lightbox relative z-10 max-w-3xl w-full max-h-[85dvh] flex flex-col items-center pointer-events-none">
+            <button onclick="closeLightbox()" class="absolute -top-4 -right-4 md:top-2 md:right-2 text-white/80 hover:text-white bg-slate-800/60 rounded-full w-12 h-12 flex items-center justify-center z-20 pointer-events-auto border-2 border-white/20"><i class="fa-solid fa-times text-xl"></i></button>
+            <img id="lightboxImage" class="max-h-[70dvh] w-auto rounded-3xl shadow-2xl border-4 border-white/20 object-contain pointer-events-auto">
+            <div class="mt-4 text-center pointer-events-auto">
+                <h3 id="lightboxTitle" class="text-white text-2xl font-black"></h3>
+                <p id="lightboxMeta" class="text-white/60 font-bold text-sm mt-1"></p>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // --- EMOJI DATA --- //
+        const emojiCategories = {
+            'People': ['👦','👧','👶','👱‍♂️','👱‍♀️','🧒','👩‍🦰','👨‍🦱','🧑','👸','🤴','🧙‍♂️','🧙‍♀️','🧚‍♀️','🧜‍♀️','🧛','🤠','🥸','🤓','😎'],
+            'Heroes': ['🦸‍♂️','🦸‍♀️','🦹‍♂️','🦹‍♀️','🥷','🏋️','🧗','🤺','🏄','⚡'],
+            'Animals': ['🦊','🐱','🐶','🐰','🐼','🐨','🦁','🐯','🐮','🐷','🐸','🐵','🦉','🦋','🐝','🐢','🐙','🦈','🐬','🦩'],
+            'Fantasy': ['🦄','🦖','🐉','👽','🤖','👻','🎃','🧞','🧶','🪄'],
+            'Space & Nature': ['🚀','🌟','🌈','🌸','🌻','🍀','🔥','❄️','🌊','⭐'],
+            'Fun': ['🎨','🎭','🎪','🎸','🎮','🏆','🎯','🧩','🪁','🎈']
+        };
+
+        const moodEmojis = ['😍','🤩','😂','🥳','😎','🤔','😲','💪','🔥','✨','💖','🌈','🏆','👏','💯','🎉','😇','🤯','🥰','👑'];
+
+        const colorOptions = [
+            { class: 'bg-red-500', hex: '#ef4444', shadow: 'shadow-[0_4px_0_rgb(185,28,28)]' },
+            { class: 'bg-orange-500', hex: '#f97316', shadow: 'shadow-[0_4px_0_rgb(194,65,12)]' },
+            { class: 'bg-amber-500', hex: '#f59e0b', shadow: 'shadow-[0_4px_0_rgb(180,83,9)]' },
+            { class: 'bg-yellow-400', hex: '#facc15', shadow: 'shadow-[0_4px_0_rgb(161,98,7)]' },
+            { class: 'bg-lime-500', hex: '#84cc16', shadow: 'shadow-[0_4px_0_rgb(63,98,18)]' },
+            { class: 'bg-emerald-500', hex: '#10b981', shadow: 'shadow-[0_4px_0_rgb(4,120,87)]' },
+            { class: 'bg-teal-500', hex: '#14b8a6', shadow: 'shadow-[0_4px_0_rgb(13,148,136)]' },
+            { class: 'bg-cyan-500', hex: '#06b6d4', shadow: 'shadow-[0_4px_0_rgb(14,116,144)]' },
+            { class: 'bg-blue-500', hex: '#3b82f6', shadow: 'shadow-[0_4px_0_rgb(29,78,216)]' },
+            { class: 'bg-indigo-500', hex: '#6366f1', shadow: 'shadow-[0_4px_0_rgb(67,56,202)]' },
+            { class: 'bg-purple-500', hex: '#a855f7', shadow: 'shadow-[0_4px_0_rgb(109,40,217)]' },
+            { class: 'bg-pink-500', hex: '#ec4899', shadow: 'shadow-[0_4px_0_rgb(190,24,93)]' },
+            { class: 'bg-rose-500', hex: '#f43f5e', shadow: 'shadow-[0_4px_0_rgb(190,18,60)]' },
+        ];
+
+        // --- STATE --- //
         let kids = [
             { id: 'all', name: 'All', icon: '🌟', color: 'bg-slate-800', shadow: 'shadow-[0_4px_0_rgb(30,41,59)]', isBase: true },
-            { id: 'k1', name: 'Isabel', class: 'Orange', icon: '👧', color: 'bg-orange-500', shadow: 'shadow-[0_4px_0_rgb(194,65,12)]' },
-            { id: 'k2', name: 'Callum', class: 'Blue', icon: '👦', color: 'bg-blue-500', shadow: 'shadow-[0_4px_0_rgb(29,78,216)]' },
-            { id: 'k3', name: 'Annebelle', class: 'Babas bo', icon: '👶', color: 'bg-pink-500', shadow: 'shadow-[0_4px_0_rgb(190,24,93)]' }
+            { id: 'k1', name: 'Isabel', age: '5', class: 'Orange', icon: '👧', color: 'bg-orange-500', shadow: 'shadow-[0_4px_0_rgb(194,65,12)]' },
+            { id: 'k2', name: 'Callum', age: '7', class: 'Blue', icon: '👦', color: 'bg-blue-500', shadow: 'shadow-[0_4px_0_rgb(29,78,216)]' },
+            { id: 'k3', name: 'Annebelle', age: '2', class: 'Babas bo', icon: '👶', color: 'bg-pink-500', shadow: 'shadow-[0_4px_0_rgb(190,24,93)]' }
         ];
 
         let artworks = [];
         let activeTab = 'All';
-        let editingKidId = null; // Tracks if we are editing an existing profile
+        let editingKidId = null;
+        let selectedEmoji = '👦';
+        let selectedColor = 'bg-red-500';
+        let selectedMood = '';
+        let searchQuery = '';
+        let sortMode = 'newest';
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('artDate').valueAsDate = new Date();
+            renderEmojiGrid();
+            renderColorSwatches();
+            renderMoodPicker();
+            setupImagePreview();
             updateAllUI();
         });
 
@@ -198,17 +397,128 @@
             renderManageList();
         }
 
-        // --- TABS & GALLERY LOGIC --- //
+        // --- SEARCH & SORT --- //
+        function toggleSearch() {
+            const el = document.getElementById('mobileSearch');
+            el.classList.toggle('hidden');
+            if (!el.classList.contains('hidden')) {
+                document.getElementById('mobileSearchInput').focus();
+            }
+        }
+
+        function handleSearch() {
+            const desktopVal = document.getElementById('searchInput')?.value || '';
+            const mobileVal = document.getElementById('mobileSearchInput')?.value || '';
+            searchQuery = (desktopVal || mobileVal).toLowerCase().trim();
+            if (document.getElementById('searchInput')) document.getElementById('searchInput').value = searchQuery;
+            if (document.getElementById('mobileSearchInput')) document.getElementById('mobileSearchInput').value = searchQuery;
+            renderGallery();
+        }
+
+        function handleSort() {
+            sortMode = document.getElementById('sortSelector').value;
+            renderGallery();
+        }
+
+        // --- EMOJI GRID --- //
+        function renderEmojiGrid(filter = '') {
+            const grid = document.getElementById('emojiGrid');
+            let html = '';
+            
+            for (const cat in emojiCategories) {
+                const filtered = emojiCategories[cat].filter(e => {
+                    if (!filter) return true;
+                    return cat.toLowerCase().includes(filter.toLowerCase());
+                });
+                if (filtered.length === 0) continue;
+                
+                html += `<div class="col-span-6 sm:col-span-8 text-xs font-black text-slate-400 uppercase tracking-wider pt-2 pb-1 px-1">${cat}</div>`;
+                filtered.forEach(emoji => {
+                    html += `<div class="emoji-grid-item ${selectedEmoji === emoji ? 'selected' : ''}" onclick="selectEmoji('${emoji}')">${emoji}</div>`;
+                });
+            }
+            
+            if (!html) {
+                html = '<div class="col-span-6 sm:col-span-8 text-center text-slate-400 font-bold py-4">No emojis found</div>';
+            }
+            grid.innerHTML = html;
+        }
+
+        function filterEmojis() {
+            const val = document.getElementById('emojiSearch').value;
+            renderEmojiGrid(val);
+        }
+
+        function selectEmoji(emoji) {
+            selectedEmoji = emoji;
+            document.getElementById('newKidEmoji').value = emoji;
+            renderEmojiGrid(document.getElementById('emojiSearch').value);
+        }
+
+        // --- COLOR SWATCHES --- //
+        function renderColorSwatches() {
+            const container = document.getElementById('colorSwatches');
+            container.innerHTML = colorOptions.map(c => 
+                `<div class="color-swatch ${c.class === selectedColor ? 'selected' : ''}" style="background-color: ${c.hex}" onclick="selectColor('${c.class}')"></div>`
+            ).join('');
+        }
+
+        function selectColor(colorClass) {
+            selectedColor = colorClass;
+            document.getElementById('newKidColor').value = colorClass;
+            renderColorSwatches();
+        }
+
+        // --- MOOD PICKER --- //
+        function renderMoodPicker() {
+            const container = document.getElementById('moodPicker');
+            container.innerHTML = moodEmojis.map(m => 
+                `<button type="button" class="reaction-btn text-xl p-1.5 rounded-lg border-2 border-transparent ${selectedMood === m ? 'active' : ''}" onclick="selectMood('${m}')">${m}</button>`
+            ).join('');
+        }
+
+        function selectMood(m) {
+            selectedMood = selectedMood === m ? '' : m;
+            renderMoodPicker();
+        }
+
+        // --- IMAGE PREVIEW --- //
+        function setupImagePreview() {
+            const input = document.getElementById('artImage');
+            input.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('previewImg').src = e.target.result;
+                        document.getElementById('dropZoneContent').classList.add('hidden');
+                        document.getElementById('imagePreview').classList.remove('hidden');
+                        document.getElementById('imagePreview').classList.add('flex');
+                    };
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+        }
+
+        function clearImagePreview() {
+            document.getElementById('artImage').value = '';
+            document.getElementById('dropZoneContent').classList.remove('hidden');
+            document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('imagePreview').classList.remove('flex');
+        }
+
+        // --- TABS --- //
         function renderTabs() {
             const tabsContainer = document.getElementById('kidsTabs');
-            tabsContainer.innerHTML = kids.map(kid => `
+            tabsContainer.innerHTML = kids.map(kid => {
+                const count = kid.isBase ? artworks.length : artworks.filter(a => a.childName === kid.name).length;
+                return `
                 <button onclick="setActiveTab('${kid.name}')" 
-                    class="btn-3d px-5 py-3 rounded-2xl font-black text-sm md:text-md whitespace-nowrap transition-all flex items-center gap-2
+                    class="btn-3d px-4 md:px-5 py-2.5 md:py-3 rounded-2xl font-black text-xs md:text-sm whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2
                     ${activeTab === kid.name ? `${kid.color} text-white ${kid.shadow} transform -translate-y-1` : 'bg-white text-slate-600 border-2 border-slate-200 shadow-[0_4px_0_rgb(226,232,240)]'}">
                     <span class="text-lg md:text-xl">${kid.icon}</span> ${kid.name} 
-                    ${kid.class && activeTab === kid.name ? `<span class="opacity-80 text-xs md:text-sm ml-1">(${kid.class})</span>` : ''}
-                </button>
-            `).join('');
+                    ${count > 0 ? `<span class="tab-count">${count}</span>` : ''}
+                </button>`;
+            }).join('');
         }
 
         function setActiveTab(name) {
@@ -217,44 +527,149 @@
             renderGallery();
         }
 
+        // --- GALLERY --- //
         function renderGallery() {
             const gallery = document.getElementById('galleryGrid');
-            const filteredArt = activeTab === 'All' ? artworks : artworks.filter(art => art.childName === activeTab);
+            let filteredArt = activeTab === 'All' ? [...artworks] : artworks.filter(art => art.childName === activeTab);
+            
+            // Search filter
+            if (searchQuery) {
+                filteredArt = filteredArt.filter(art => 
+                    art.theme.toLowerCase().includes(searchQuery) || 
+                    art.childName.toLowerCase().includes(searchQuery)
+                );
+            }
+            
+            // Sort
+            if (sortMode === 'newest') {
+                filteredArt.sort((a, b) => b.id - a.id);
+            } else if (sortMode === 'oldest') {
+                filteredArt.sort((a, b) => a.id - b.id);
+            } else if (sortMode === 'alpha') {
+                filteredArt.sort((a, b) => a.theme.localeCompare(b.theme));
+            }
 
             if (filteredArt.length === 0) {
-                gallery.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center text-slate-400 py-20 bg-white/50 rounded-[3rem] border-4 border-dashed border-slate-200 mt-4"><div class="text-7xl mb-4">🖼️</div><p class="text-xl md:text-2xl font-black text-slate-600 text-center px-4">No artwork here yet!</p></div>`;
+                const msg = searchQuery ? 'No results found' : 'No artwork here yet!';
+                const icon = searchQuery ? '🔍' : '🖼️';
+                gallery.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center text-slate-400 py-16 md:py-20 bg-white/50 rounded-[2rem] md:rounded-[3rem] border-4 border-dashed border-slate-200 mt-4"><div class="text-6xl md:text-7xl mb-4 empty-bounce">${icon}</div><p class="text-lg md:text-2xl font-black text-slate-600 text-center px-4">${msg}</p>${!searchQuery ? '<p class="text-sm font-bold text-slate-400 mt-2">Upload some art to get started!</p>' : ''}</div>`;
                 return;
             }
 
-            gallery.innerHTML = filteredArt.map(art => {
+            gallery.innerHTML = filteredArt.map((art, index) => {
                 const kidObj = kids.find(k => k.name === art.childName) || kids[0];
+                const reactions = art.reactions || {};
+                const reactionEmojis = ['❤️','😍','🔥','👏','🌟'];
+                const isFav = art.favorite;
+                
                 return `
-                <div class="bg-white rounded-[2rem] border-4 border-slate-100 p-3 shadow-lg hover:-translate-y-1 transition group">
-                    <div class="h-48 md:h-56 overflow-hidden rounded-2xl bg-slate-100 relative border-2 border-slate-100">
+                <div class="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-slate-100 p-2.5 md:p-3 shadow-lg hover:-translate-y-1 transition group card-enter" style="animation-delay: ${index * 0.05}s">
+                    <div class="h-44 md:h-56 overflow-hidden rounded-xl md:rounded-2xl bg-slate-100 relative border-2 border-slate-100 cursor-pointer" onclick="openLightbox(${art.id})">
                         <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
-                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-                            <button class="btn-3d bg-white text-red-500 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="deleteArt(${art.id})"><i class="fa-solid fa-trash"></i></button>
+                        ${art.mood ? `<div class="absolute top-2 left-2 text-2xl bg-white/80 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">${art.mood}</div>` : ''}
+                        <div class="absolute top-2 right-2">
+                            <button onclick="event.stopPropagation(); toggleFavorite(${art.id})" class="fav-star text-2xl ${isFav ? 'active' : 'text-white/60 hover:text-amber-400'} drop-shadow-lg">
+                                ${isFav ? '⭐' : '☆'}
+                            </button>
+                        </div>
+                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-sm">
+                            <button class="btn-3d bg-white text-indigo-600 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); openLightbox(${art.id})"><i class="fa-solid fa-expand"></i></button>
+                            <button class="btn-3d bg-white text-red-500 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); deleteArt(${art.id})"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
-                    <div class="p-3 pt-4">
-                        <div class="flex justify-between items-start mb-2 gap-2">
-                            <h3 class="font-black text-lg md:text-xl text-slate-800 truncate">${art.theme}</h3>
-                            <span class="text-xs font-black px-2 py-1 rounded-lg ${kidObj.color} text-white whitespace-nowrap">${kidObj.icon} ${art.childName}</span>
+                    <div class="p-2.5 md:p-3 pt-3 md:pt-4">
+                        <div class="flex justify-between items-start mb-1.5 gap-2">
+                            <h3 class="font-black text-base md:text-lg text-slate-800 truncate">${art.theme}</h3>
+                            <span class="text-[10px] md:text-xs font-black px-2 py-1 rounded-lg ${kidObj.color} text-white whitespace-nowrap">${kidObj.icon} ${art.childName}</span>
                         </div>
-                        <p class="text-sm font-bold text-slate-500"><i class="fa-regular fa-calendar mr-1"></i> ${new Date(art.date).toLocaleDateString()}</p>
+                        <p class="text-xs font-bold text-slate-400 mb-3"><i class="fa-regular fa-calendar mr-1"></i> ${new Date(art.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                        
+                        <div class="flex items-center gap-1 flex-wrap border-t-2 border-slate-50 pt-2.5">
+                            ${reactionEmojis.map(emoji => {
+                                const count = reactions[emoji] || 0;
+                                const isActive = (art.userReactions || []).includes(emoji);
+                                return `<button onclick="toggleReaction(${art.id}, '${emoji}', event)" class="reaction-btn flex items-center gap-0.5 text-sm px-1.5 py-0.5 rounded-lg border-2 ${isActive ? 'border-indigo-300 bg-indigo-50' : 'border-transparent hover:bg-slate-50'}">${emoji}${count > 0 ? `<span class="text-xs font-black text-slate-500">${count}</span>` : ''}</button>`;
+                            }).join('')}
+                        </div>
                     </div>
-                </div>`
+                </div>`;
             }).join('');
         }
 
-        // --- UPLOAD LOGIC --- //
-        function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
-        function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); document.getElementById('uploadForm').reset(); }
+        // --- REACTIONS --- //
+        function toggleReaction(artId, emoji, event) {
+            event.stopPropagation();
+            const art = artworks.find(a => a.id === artId);
+            if (!art) return;
+            
+            if (!art.reactions) art.reactions = {};
+            if (!art.userReactions) art.userReactions = [];
+            
+            const idx = art.userReactions.indexOf(emoji);
+            if (idx > -1) {
+                art.userReactions.splice(idx, 1);
+                art.reactions[emoji] = Math.max(0, (art.reactions[emoji] || 0) - 1);
+                if (art.reactions[emoji] === 0) delete art.reactions[emoji];
+            } else {
+                art.userReactions.push(emoji);
+                art.reactions[emoji] = (art.reactions[emoji] || 0) + 1;
+                spawnFlyEmoji(event, emoji);
+            }
+            renderGallery();
+        }
+
+        function spawnFlyEmoji(event, emoji) {
+            const el = document.createElement('div');
+            el.className = 'reaction-fly';
+            el.textContent = emoji;
+            el.style.left = (event.clientX - 16) + 'px';
+            el.style.top = (event.clientY - 16) + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        // --- FAVORITES --- //
+        function toggleFavorite(artId) {
+            const art = artworks.find(a => a.id === artId);
+            if (!art) return;
+            art.favorite = !art.favorite;
+            renderGallery();
+        }
+
+        // --- LIGHTBOX --- //
+        function openLightbox(artId) {
+            const art = artworks.find(a => a.id === artId);
+            if (!art) return;
+            const kidObj = kids.find(k => k.name === art.childName) || kids[0];
+            
+            document.getElementById('lightboxImage').src = art.imageUrl;
+            document.getElementById('lightboxTitle').textContent = `${art.mood || ''} ${art.theme}`;
+            document.getElementById('lightboxMeta').textContent = `by ${kidObj.icon} ${art.childName} (${kidObj.age} yrs) • ${new Date(art.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+            document.getElementById('lightboxModal').classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightboxModal').classList.add('hidden');
+        }
+
+        // --- UPLOAD --- //
+        function openUploadModal() { 
+            document.getElementById('uploadModal').classList.remove('hidden'); 
+        }
+        function closeUploadModal() { 
+            document.getElementById('uploadModal').classList.add('hidden'); 
+            document.getElementById('uploadForm').reset(); 
+            selectedMood = '';
+            renderMoodPicker();
+            clearImagePreview();
+        }
 
         function renderUploadDropdown() {
             const select = document.getElementById('childSelect');
             const actualKids = kids.filter(k => !k.isBase);
-            select.innerHTML = actualKids.length === 0 ? `<option value="" disabled selected>Add a child first!</option>` : actualKids.map(k => `<option value="${k.name}">${k.icon} ${k.name} (${k.class})</option>`).join('');
+            select.innerHTML = actualKids.length === 0 
+                ? `<option value="" disabled selected>Add a child first!</option>` 
+                : actualKids.map(k => `<option value="${k.name}">${k.icon} ${k.name} (Age: ${k.age})</option>`).join('');
         }
 
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
@@ -263,73 +678,108 @@
             const childName = document.getElementById('childSelect').value;
             if (!childName) return alert("Please add a child profile first!");
             if (file) {
-                artworks.unshift({ id: Date.now(), childName, date: document.getElementById('artDate').value, theme: document.getElementById('artTheme').value, imageUrl: URL.createObjectURL(file) });
+                artworks.unshift({ 
+                    id: Date.now(), 
+                    childName, 
+                    date: document.getElementById('artDate').value, 
+                    theme: document.getElementById('artTheme').value, 
+                    imageUrl: URL.createObjectURL(file),
+                    mood: selectedMood,
+                    reactions: {},
+                    userReactions: [],
+                    favorite: false
+                });
                 closeUploadModal();
                 setActiveTab(childName);
             }
         });
 
-        function deleteArt(id) { if(confirm("Delete this masterpiece? 🗑️")) { artworks = artworks.filter(a => a.id !== id); renderGallery(); } }
+        function deleteArt(id) { 
+            if(confirm("Delete this masterpiece? 🗑️")) { 
+                artworks = artworks.filter(a => a.id !== id); 
+                renderGallery(); 
+            } 
+        }
 
-        // --- MANAGE FAMILY LOGIC --- //
-        function openManageModal() { document.getElementById('manageModal').classList.remove('hidden'); }
+        // --- MANAGE FAMILY --- //
+        function openManageModal() { 
+            document.getElementById('manageModal').classList.remove('hidden'); 
+        }
         function closeManageModal() { 
             document.getElementById('manageModal').classList.add('hidden'); 
-            cancelEdit(); // Reset form on close
+            cancelEdit();
         }
 
         function renderManageList() {
             const list = document.getElementById('manageKidsList');
             const actualKids = kids.filter(k => !k.isBase);
-            list.innerHTML = actualKids.length === 0 ? `<p class="text-slate-400 font-bold text-center py-4">No kids added yet.</p>` : actualKids.map(kid => `
-                <div class="flex justify-between items-center bg-white border-2 border-slate-100 p-3 rounded-xl shadow-sm ${editingKidId === kid.id ? 'border-indigo-400 bg-indigo-50' : ''}">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 ${kid.color} rounded-full flex items-center justify-center text-xl text-white shadow-inner">${kid.icon}</div>
-                        <div>
-                            <p class="font-black text-slate-800">${kid.name}</p>
-                            <p class="text-xs font-bold text-slate-400">${kid.class}</p>
+            list.innerHTML = actualKids.length === 0 
+                ? `<p class="text-slate-400 font-bold text-center py-4">No kids added yet. Add your first artist below! 🎨</p>` 
+                : actualKids.map(kid => {
+                    const artCount = artworks.filter(a => a.childName === kid.name).length;
+                    return `
+                    <div class="flex justify-between items-center bg-white border-2 ${editingKidId === kid.id ? 'border-indigo-400 bg-indigo-50' : 'border-slate-100'} p-3 rounded-xl shadow-sm transition-all">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 ${kid.color} rounded-full flex items-center justify-center text-xl text-white shadow-inner shrink-0">${kid.icon}</div>
+                            <div>
+                                <p class="font-black text-slate-800">${kid.name}</p>
+                                <p class="text-[10px] sm:text-xs font-bold text-slate-400">${kid.class} • Age: ${kid.age} • ${artCount} art</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="startEditKid('${kid.id}')" class="text-slate-400 hover:text-indigo-500 transition p-2 bg-slate-100 hover:bg-indigo-100 rounded-lg"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="removeKid('${kid.id}')" class="text-slate-400 hover:text-red-500 transition p-2 bg-slate-100 hover:bg-red-100 rounded-lg"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
+                        <div class="flex gap-2">
+                            <button onclick="startEditKid('${kid.id}')" class="text-slate-400 hover:text-indigo-500 transition p-2 bg-slate-100 hover:bg-indigo-100 rounded-lg"><i class="fa-solid fa-pen text-sm"></i></button>
+                            <button onclick="removeKid('${kid.id}')" class="text-slate-400 hover:text-red-500 transition p-2 bg-slate-100 hover:bg-red-100 rounded-lg"><i class="fa-solid fa-trash text-sm"></i></button>
+                        </div>
+                    </div>`;
+                }).join('');
         }
 
-        // Setup the form for Editing
         function startEditKid(id) {
             editingKidId = id;
             const kid = kids.find(k => k.id === id);
             
-            // Populate form
             document.getElementById('newKidName').value = kid.name;
+            document.getElementById('newKidAge').value = kid.age || '';
             document.getElementById('newKidClass').value = kid.class;
+            
+            selectedEmoji = kid.icon;
             document.getElementById('newKidEmoji').value = kid.icon;
+            renderEmojiGrid(document.getElementById('emojiSearch').value);
+            
+            selectedColor = kid.color;
             document.getElementById('newKidColor').value = kid.color;
+            renderColorSwatches();
 
-            // Change UI to "Edit Mode"
             document.getElementById('formTitle').innerHTML = '✏️ Edit Profile';
-            document.getElementById('formContainer').classList.replace('border-slate-200', 'border-indigo-300');
-            document.getElementById('formContainer').classList.replace('bg-slate-50', 'bg-indigo-50/50');
+            document.getElementById('formContainer').classList.remove('border-slate-200', 'bg-slate-50');
+            document.getElementById('formContainer').classList.add('border-indigo-300', 'bg-indigo-50/50');
             
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.innerHTML = 'Update Profile';
             submitBtn.className = 'btn-3d flex-1 bg-indigo-500 text-white font-black py-3 rounded-xl shadow-[0_4px_0_rgb(99,102,241)]';
             
             document.getElementById('cancelEditBtn').classList.remove('hidden');
-            renderManageList(); // Re-render to highlight the row being edited
+            renderManageList();
+            
+            // Scroll form into view gently
+            document.getElementById('formContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        // Revert form back to "Add Mode"
         function cancelEdit() {
             editingKidId = null;
             document.getElementById('addKidForm').reset();
+            document.getElementById('emojiSearch').value = '';
             
+            selectedEmoji = '👦';
+            selectedColor = 'bg-red-500';
+            document.getElementById('newKidEmoji').value = '👦';
+            document.getElementById('newKidColor').value = 'bg-red-500';
+            renderEmojiGrid();
+            renderColorSwatches();
+
             document.getElementById('formTitle').innerHTML = '➕ Add New Kid';
-            document.getElementById('formContainer').classList.replace('border-indigo-300', 'border-slate-200');
-            document.getElementById('formContainer').classList.replace('bg-indigo-50/50', 'bg-slate-50');
+            document.getElementById('formContainer').classList.remove('border-indigo-300', 'bg-indigo-50/50');
+            document.getElementById('formContainer').classList.add('border-slate-200', 'bg-slate-50');
             
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.innerHTML = 'Add to Family';
@@ -345,31 +795,28 @@
             const name = document.getElementById('newKidName').value.trim();
             const colorClass = document.getElementById('newKidColor').value;
             
-            const shadowMap = { 'bg-red-500': 'shadow-[0_4px_0_rgb(185,28,28)]', 'bg-orange-500': 'shadow-[0_4px_0_rgb(194,65,12)]', 'bg-emerald-500': 'shadow-[0_4px_0_rgb(4,120,87)]', 'bg-amber-500': 'shadow-[0_4px_0_rgb(180,83,9)]', 'bg-purple-500': 'shadow-[0_4px_0_rgb(109,40,217)]', 'bg-cyan-500': 'shadow-[0_4px_0_rgb(14,116,144)]', 'bg-rose-500': 'shadow-[0_4px_0_rgb(190,18,60)]', 'bg-blue-500': 'shadow-[0_4px_0_rgb(29,78,216)]', 'bg-pink-500': 'shadow-[0_4px_0_rgb(190,24,93)]' };
+            const colorObj = colorOptions.find(c => c.class === colorClass);
+            const shadow = colorObj ? colorObj.shadow : 'shadow-[0_4px_0_rgb(71,85,105)]';
 
             const updatedData = {
                 name: name,
+                age: document.getElementById('newKidAge').value.trim(),
                 class: document.getElementById('newKidClass').value.trim(),
                 icon: document.getElementById('newKidEmoji').value,
                 color: colorClass,
-                shadow: shadowMap[colorClass] || 'shadow-[0_4px_0_rgb(71,85,105)]'
+                shadow: shadow
             };
 
             if (editingKidId) {
-                // Update existing kid
                 const oldName = kids.find(k => k.id === editingKidId).name;
                 kids = kids.map(k => k.id === editingKidId ? { ...k, ...updatedData } : k);
-                
-                // Also update any existing artwork that belonged to this kid's old name
                 artworks = artworks.map(art => art.childName === oldName ? { ...art, childName: name } : art);
-                if (activeTab === oldName) activeTab = name; // update tab focus
-                
+                if (activeTab === oldName) activeTab = name; 
             } else {
-                // Add new kid
                 kids.push({ id: 'k_' + Date.now(), isBase: false, ...updatedData });
             }
 
-            cancelEdit(); // Reset form
+            cancelEdit();
             updateAllUI();
         });
 
@@ -378,14 +825,25 @@
             if(confirm(`Remove ${kid.name}? (Their artwork stays in 'All' but loses their tag)`)) {
                 kids = kids.filter(k => k.id !== id);
                 if(activeTab === kid.name) activeTab = 'All';
+                if(editingKidId === id) cancelEdit();
                 updateAllUI();
             }
         }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+                closeUploadModal();
+                closeManageModal();
+            }
+        });
     </script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
-</script>
+    
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+    </script>
 </body>
 </html>
