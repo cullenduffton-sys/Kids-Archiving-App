@@ -1,0 +1,382 @@
+<index.html>
+<html lang="en">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6366f1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtArchive | Kids Artwork Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap');
+        body { 
+            font-family: 'Nunito', sans-serif; 
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+        .btn-3d { transition: all 0.1s ease; }
+        .btn-3d:active {
+            transform: translateY(4px);
+            box-shadow: 0 0px 0 0 transparent !important;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen overflow-hidden flex flex-col">
+
+    <header class="bg-white/90 backdrop-blur-md shadow-sm px-6 py-4 flex flex-col md:flex-row justify-between items-center z-10 border-b-4 border-indigo-100 gap-4 shrink-0">
+        <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-500 text-white p-3 rounded-2xl shadow-md transform -rotate-6">
+                    <i class="fa-solid fa-palette text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-black text-indigo-700 tracking-tight">ArtArchive</h1>
+                    <p class="text-sm font-bold text-slate-400">The Family Gallery</p>
+                </div>
+            </div>
+            <button onclick="openManageModal()" class="md:hidden text-slate-500 hover:text-indigo-600 text-xl"><i class="fa-solid fa-users-gear"></i></button>
+        </div>
+        
+        <div class="flex gap-4 items-center w-full md:w-auto">
+            <select id="yearSelector" class="bg-slate-100 border-2 border-slate-200 rounded-xl px-3 py-3 text-sm md:text-lg font-bold text-slate-700 outline-none cursor-pointer hover:border-indigo-400 transition hidden sm:block">
+                <option value="2026">Year: 2026</option>
+                <option value="2027">Year: 2027</option>
+            </select>
+            <button onclick="openManageModal()" class="hidden md:flex btn-3d bg-slate-100 text-slate-600 hover:text-indigo-600 px-4 py-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)] font-bold items-center gap-2">
+                <i class="fa-solid fa-users-gear"></i> Family
+            </button>
+            <button class="btn-3d bg-gradient-to-r from-pink-500 to-orange-400 text-white px-6 py-3 rounded-2xl shadow-[0_6px_0_rgb(219,39,119)] font-black text-md md:text-lg flex-1 md:flex-none text-center" onclick="openUploadModal()">
+                ✨ Upload Art
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-hidden flex flex-col p-4 md:p-6 max-w-7xl mx-auto w-full">
+        <div class="flex gap-4 mb-6 overflow-x-auto no-scrollbar pb-4 pt-2 px-2 shrink-0" id="kidsTabs"></div>
+
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[2rem] p-5 text-white flex flex-col sm:flex-row justify-between items-center mb-6 shadow-xl border-4 border-purple-300 transform transition hover:scale-[1.01] shrink-0">
+            <div class="flex items-center gap-4 mb-4 sm:mb-0">
+                <div class="text-4xl">🤖</div>
+                <div>
+                    <h3 class="font-black text-xl">AI Yearbook Agent</h3>
+                    <p class="text-sm md:text-md font-semibold opacity-90">I'll automatically build your 2026 collage!</p>
+                </div>
+            </div>
+            <button class="bg-white text-indigo-700 px-6 py-2 rounded-xl text-md font-black shadow-lg opacity-50 cursor-not-allowed">
+                Generate Now
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-2 pb-20 no-scrollbar">
+            <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"></div>
+        </div>
+    </main>
+
+    <div id="uploadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeUploadModal()"></div>
+        <div class="relative bg-white rounded-[2rem] border-4 border-indigo-400 shadow-[0_12px_0_rgb(129,140,248)] w-full max-w-md p-6 md:p-8 z-10 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black text-slate-800">🎨 New Art</h2>
+                <button onclick="closeUploadModal()" class="text-slate-400 hover:text-pink-500 bg-slate-100 rounded-full w-10 h-10 flex items-center justify-center"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <form id="uploadForm" class="space-y-4">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-2">Artist</label>
+                    <select id="childSelect" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 outline-none" required></select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-2">Date</label>
+                    <input type="date" id="artDate" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 outline-none" required>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-2">Theme / Title</label>
+                    <input type="text" id="artTheme" placeholder="e.g., Space Aliens!" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 outline-none" required>
+                </div>
+                <div class="bg-indigo-50 p-4 rounded-2xl border-2 border-dashed border-indigo-300">
+                    <input type="file" id="artImage" accept="image/*" capture="environment" class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-black file:bg-indigo-600 file:text-white cursor-pointer" required>
+                </div>
+                <button type="submit" class="btn-3d w-full bg-indigo-600 text-white font-black text-lg py-4 rounded-xl shadow-[0_6px_0_rgb(67,56,202)] mt-4">Save to Archive! 🚀</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="manageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeManageModal()"></div>
+        <div class="relative bg-white rounded-[2rem] border-4 border-emerald-400 shadow-[0_12px_0_rgb(52,211,153)] w-full max-w-lg p-6 md:p-8 z-10 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black text-slate-800">👨‍👩‍👧‍👦 Manage Family</h2>
+                <button onclick="closeManageModal()" class="text-slate-400 hover:text-red-500 bg-slate-100 rounded-full w-10 h-10 flex items-center justify-center"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            
+            <div class="mb-8">
+                <h3 class="font-bold text-slate-500 mb-3 text-sm uppercase tracking-wider">Current Roster</h3>
+                <div id="manageKidsList" class="space-y-3">
+                    </div>
+            </div>
+
+            <div class="bg-slate-50 p-5 rounded-2xl border-2 border-slate-200 transition-colors" id="formContainer">
+                <h3 class="font-black text-lg text-slate-800 mb-4" id="formTitle">➕ Add New Kid</h3>
+                <form id="addKidForm" class="space-y-4">
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <input type="text" id="newKidName" placeholder="Name (e.g. Leo)" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2 font-bold outline-none" required>
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" id="newKidClass" placeholder="Class (e.g. Red)" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2 font-bold outline-none" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block font-bold text-slate-500 text-sm mb-2">Pick an Emoji:</label>
+                        <select id="newKidEmoji" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2 text-xl outline-none bg-white cursor-pointer">
+                            <option value="👦">👦 Boy</option>
+                            <option value="👧">👧 Girl</option>
+                            <option value="👶">👶 Baby</option>
+                            <option value="🦸‍♂️">🦸‍♂️ Superhero</option>
+                            <option value="🦸‍♀️">🦸‍♀️ Supergirl</option>
+                            <option value="🥷">🥷 Ninja</option>
+                            <option value="🦖">🦖 Dino</option>
+                            <option value="🦄">🦄 Unicorn</option>
+                            <option value="🦊">🦊 Fox</option>
+                            <option value="🚀">🚀 Rocket</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-slate-500 text-sm mb-2">Pick a Theme Color:</label>
+                        <select id="newKidColor" class="w-full border-2 border-slate-300 rounded-xl px-4 py-2 font-bold outline-none bg-white cursor-pointer">
+                            <option value="bg-red-500" class="text-red-500">Red</option>
+                            <option value="bg-orange-500" class="text-orange-500">Orange</option>
+                            <option value="bg-amber-500" class="text-amber-500">Yellow</option>
+                            <option value="bg-emerald-500" class="text-emerald-500">Green</option>
+                            <option value="bg-cyan-500" class="text-cyan-500">Cyan</option>
+                            <option value="bg-blue-500" class="text-blue-500">Blue</option>
+                            <option value="bg-purple-500" class="text-purple-500">Purple</option>
+                            <option value="bg-pink-500" class="text-pink-500">Pink</option>
+                            <option value="bg-rose-500" class="text-rose-500">Rose</option>
+                        </select>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" id="submitBtn" class="btn-3d flex-1 bg-emerald-500 text-white font-black py-3 rounded-xl shadow-[0_4px_0_rgb(16,185,129)]">Add to Family</button>
+                        <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden btn-3d bg-slate-300 text-slate-700 font-black px-6 py-3 rounded-xl shadow-[0_4px_0_rgb(148,163,184)]">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let kids = [
+            { id: 'all', name: 'All', icon: '🌟', color: 'bg-slate-800', shadow: 'shadow-[0_4px_0_rgb(30,41,59)]', isBase: true },
+            { id: 'k1', name: 'Isabel', class: 'Orange', icon: '👧', color: 'bg-orange-500', shadow: 'shadow-[0_4px_0_rgb(194,65,12)]' },
+            { id: 'k2', name: 'Callum', class: 'Blue', icon: '👦', color: 'bg-blue-500', shadow: 'shadow-[0_4px_0_rgb(29,78,216)]' },
+            { id: 'k3', name: 'Annebelle', class: 'Babas bo', icon: '👶', color: 'bg-pink-500', shadow: 'shadow-[0_4px_0_rgb(190,24,93)]' }
+        ];
+
+        let artworks = [];
+        let activeTab = 'All';
+        let editingKidId = null; // Tracks if we are editing an existing profile
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('artDate').valueAsDate = new Date();
+            updateAllUI();
+        });
+
+        function updateAllUI() {
+            renderTabs();
+            renderGallery();
+            renderUploadDropdown();
+            renderManageList();
+        }
+
+        // --- TABS & GALLERY LOGIC --- //
+        function renderTabs() {
+            const tabsContainer = document.getElementById('kidsTabs');
+            tabsContainer.innerHTML = kids.map(kid => `
+                <button onclick="setActiveTab('${kid.name}')" 
+                    class="btn-3d px-5 py-3 rounded-2xl font-black text-sm md:text-md whitespace-nowrap transition-all flex items-center gap-2
+                    ${activeTab === kid.name ? `${kid.color} text-white ${kid.shadow} transform -translate-y-1` : 'bg-white text-slate-600 border-2 border-slate-200 shadow-[0_4px_0_rgb(226,232,240)]'}">
+                    <span class="text-lg md:text-xl">${kid.icon}</span> ${kid.name} 
+                    ${kid.class && activeTab === kid.name ? `<span class="opacity-80 text-xs md:text-sm ml-1">(${kid.class})</span>` : ''}
+                </button>
+            `).join('');
+        }
+
+        function setActiveTab(name) {
+            activeTab = name;
+            renderTabs();
+            renderGallery();
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('galleryGrid');
+            const filteredArt = activeTab === 'All' ? artworks : artworks.filter(art => art.childName === activeTab);
+
+            if (filteredArt.length === 0) {
+                gallery.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center text-slate-400 py-20 bg-white/50 rounded-[3rem] border-4 border-dashed border-slate-200 mt-4"><div class="text-7xl mb-4">🖼️</div><p class="text-xl md:text-2xl font-black text-slate-600 text-center px-4">No artwork here yet!</p></div>`;
+                return;
+            }
+
+            gallery.innerHTML = filteredArt.map(art => {
+                const kidObj = kids.find(k => k.name === art.childName) || kids[0];
+                return `
+                <div class="bg-white rounded-[2rem] border-4 border-slate-100 p-3 shadow-lg hover:-translate-y-1 transition group">
+                    <div class="h-48 md:h-56 overflow-hidden rounded-2xl bg-slate-100 relative border-2 border-slate-100">
+                        <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+                            <button class="btn-3d bg-white text-red-500 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="deleteArt(${art.id})"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="p-3 pt-4">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <h3 class="font-black text-lg md:text-xl text-slate-800 truncate">${art.theme}</h3>
+                            <span class="text-xs font-black px-2 py-1 rounded-lg ${kidObj.color} text-white whitespace-nowrap">${kidObj.icon} ${art.childName}</span>
+                        </div>
+                        <p class="text-sm font-bold text-slate-500"><i class="fa-regular fa-calendar mr-1"></i> ${new Date(art.date).toLocaleDateString()}</p>
+                    </div>
+                </div>`
+            }).join('');
+        }
+
+        // --- UPLOAD LOGIC --- //
+        function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
+        function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); document.getElementById('uploadForm').reset(); }
+
+        function renderUploadDropdown() {
+            const select = document.getElementById('childSelect');
+            const actualKids = kids.filter(k => !k.isBase);
+            select.innerHTML = actualKids.length === 0 ? `<option value="" disabled selected>Add a child first!</option>` : actualKids.map(k => `<option value="${k.name}">${k.icon} ${k.name} (${k.class})</option>`).join('');
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            const file = document.getElementById('artImage').files[0];
+            const childName = document.getElementById('childSelect').value;
+            if (!childName) return alert("Please add a child profile first!");
+            if (file) {
+                artworks.unshift({ id: Date.now(), childName, date: document.getElementById('artDate').value, theme: document.getElementById('artTheme').value, imageUrl: URL.createObjectURL(file) });
+                closeUploadModal();
+                setActiveTab(childName);
+            }
+        });
+
+        function deleteArt(id) { if(confirm("Delete this masterpiece? 🗑️")) { artworks = artworks.filter(a => a.id !== id); renderGallery(); } }
+
+        // --- MANAGE FAMILY LOGIC --- //
+        function openManageModal() { document.getElementById('manageModal').classList.remove('hidden'); }
+        function closeManageModal() { 
+            document.getElementById('manageModal').classList.add('hidden'); 
+            cancelEdit(); // Reset form on close
+        }
+
+        function renderManageList() {
+            const list = document.getElementById('manageKidsList');
+            const actualKids = kids.filter(k => !k.isBase);
+            list.innerHTML = actualKids.length === 0 ? `<p class="text-slate-400 font-bold text-center py-4">No kids added yet.</p>` : actualKids.map(kid => `
+                <div class="flex justify-between items-center bg-white border-2 border-slate-100 p-3 rounded-xl shadow-sm ${editingKidId === kid.id ? 'border-indigo-400 bg-indigo-50' : ''}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 ${kid.color} rounded-full flex items-center justify-center text-xl text-white shadow-inner">${kid.icon}</div>
+                        <div>
+                            <p class="font-black text-slate-800">${kid.name}</p>
+                            <p class="text-xs font-bold text-slate-400">${kid.class}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="startEditKid('${kid.id}')" class="text-slate-400 hover:text-indigo-500 transition p-2 bg-slate-100 hover:bg-indigo-100 rounded-lg"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="removeKid('${kid.id}')" class="text-slate-400 hover:text-red-500 transition p-2 bg-slate-100 hover:bg-red-100 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Setup the form for Editing
+        function startEditKid(id) {
+            editingKidId = id;
+            const kid = kids.find(k => k.id === id);
+            
+            // Populate form
+            document.getElementById('newKidName').value = kid.name;
+            document.getElementById('newKidClass').value = kid.class;
+            document.getElementById('newKidEmoji').value = kid.icon;
+            document.getElementById('newKidColor').value = kid.color;
+
+            // Change UI to "Edit Mode"
+            document.getElementById('formTitle').innerHTML = '✏️ Edit Profile';
+            document.getElementById('formContainer').classList.replace('border-slate-200', 'border-indigo-300');
+            document.getElementById('formContainer').classList.replace('bg-slate-50', 'bg-indigo-50/50');
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = 'Update Profile';
+            submitBtn.className = 'btn-3d flex-1 bg-indigo-500 text-white font-black py-3 rounded-xl shadow-[0_4px_0_rgb(99,102,241)]';
+            
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            renderManageList(); // Re-render to highlight the row being edited
+        }
+
+        // Revert form back to "Add Mode"
+        function cancelEdit() {
+            editingKidId = null;
+            document.getElementById('addKidForm').reset();
+            
+            document.getElementById('formTitle').innerHTML = '➕ Add New Kid';
+            document.getElementById('formContainer').classList.replace('border-indigo-300', 'border-slate-200');
+            document.getElementById('formContainer').classList.replace('bg-indigo-50/50', 'bg-slate-50');
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = 'Add to Family';
+            submitBtn.className = 'btn-3d flex-1 bg-emerald-500 text-white font-black py-3 rounded-xl shadow-[0_4px_0_rgb(16,185,129)]';
+            
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            renderManageList();
+        }
+
+        document.getElementById('addKidForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('newKidName').value.trim();
+            const colorClass = document.getElementById('newKidColor').value;
+            
+            const shadowMap = { 'bg-red-500': 'shadow-[0_4px_0_rgb(185,28,28)]', 'bg-orange-500': 'shadow-[0_4px_0_rgb(194,65,12)]', 'bg-emerald-500': 'shadow-[0_4px_0_rgb(4,120,87)]', 'bg-amber-500': 'shadow-[0_4px_0_rgb(180,83,9)]', 'bg-purple-500': 'shadow-[0_4px_0_rgb(109,40,217)]', 'bg-cyan-500': 'shadow-[0_4px_0_rgb(14,116,144)]', 'bg-rose-500': 'shadow-[0_4px_0_rgb(190,18,60)]', 'bg-blue-500': 'shadow-[0_4px_0_rgb(29,78,216)]', 'bg-pink-500': 'shadow-[0_4px_0_rgb(190,24,93)]' };
+
+            const updatedData = {
+                name: name,
+                class: document.getElementById('newKidClass').value.trim(),
+                icon: document.getElementById('newKidEmoji').value,
+                color: colorClass,
+                shadow: shadowMap[colorClass] || 'shadow-[0_4px_0_rgb(71,85,105)]'
+            };
+
+            if (editingKidId) {
+                // Update existing kid
+                const oldName = kids.find(k => k.id === editingKidId).name;
+                kids = kids.map(k => k.id === editingKidId ? { ...k, ...updatedData } : k);
+                
+                // Also update any existing artwork that belonged to this kid's old name
+                artworks = artworks.map(art => art.childName === oldName ? { ...art, childName: name } : art);
+                if (activeTab === oldName) activeTab = name; // update tab focus
+                
+            } else {
+                // Add new kid
+                kids.push({ id: 'k_' + Date.now(), isBase: false, ...updatedData });
+            }
+
+            cancelEdit(); // Reset form
+            updateAllUI();
+        });
+
+        function removeKid(id) {
+            const kid = kids.find(k => k.id === id);
+            if(confirm(`Remove ${kid.name}? (Their artwork stays in 'All' but loses their tag)`)) {
+                kids = kids.filter(k => k.id !== id);
+                if(activeTab === kid.name) activeTab = 'All';
+                updateAllUI();
+            }
+        }
+    </script>
+</body>
+</html>
