@@ -27,31 +27,13 @@
             overscroll-behavior-y: none; 
         }
         
-        .smooth-scroll {
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-        }
-
+        .smooth-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
         .btn-3d { transition: all 0.1s ease; }
-        .btn-3d:active {
-            transform: translateY(4px);
-            box-shadow: 0 0px 0 0 transparent !important;
-        }
+        .btn-3d:active { transform: translateY(4px); box-shadow: 0 0px 0 0 transparent !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .emoji-grid-item {
-            transition: all 0.15s ease;
-            cursor: pointer;
-            border: 3px solid transparent;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.75rem;
-            padding: 6px;
-            background: white;
-        }
+        .emoji-grid-item { transition: all 0.15s ease; cursor: pointer; border: 3px solid transparent; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; padding: 6px; background: white; }
         .emoji-grid-item:hover { transform: scale(1.25); background: #eef2ff; border-color: #a5b4fc; z-index: 2; }
         .emoji-grid-item.selected { border-color: #6366f1; background: #e0e7ff; transform: scale(1.15); box-shadow: 0 0 0 3px rgba(99,102,241,0.3); }
         
@@ -86,10 +68,7 @@
         .lightbox { animation: fadeIn 0.25s ease; }
         @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-        #loadingOverlay {
-            position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99999; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: #6366f1; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -167,10 +146,66 @@
     <main class="flex-1 overflow-hidden flex flex-col p-3 md:p-6 max-w-7xl mx-auto w-full">
         <div class="smooth-scroll flex gap-3 mb-4 md:mb-6 overflow-x-auto no-scrollbar pb-3 pt-2 px-1 shrink-0" id="kidsTabs"></div>
 
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 text-white flex flex-col sm:flex-row justify-between items-center mb-4 md:mb-6 shadow-xl border-4 border-purple-300 transform transition hover:scale-[1.01] shrink-0 gap-4">
+            <div class="flex items-center gap-3 md:gap-4">
+                <div class="text-3xl md:text-4xl">🤖</div>
+                <div>
+                    <h3 class="font-black text-lg md:text-xl">AI Collage Studio</h3>
+                    <p class="text-xs md:text-sm font-semibold opacity-90">Export your archive as a grid or wallpaper!</p>
+                </div>
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button onclick="openGeneratorModal('yearbook')" class="flex-1 btn-3d bg-white text-indigo-700 px-5 py-2.5 rounded-xl text-sm md:text-md font-black shadow-[0_4px_0_rgb(165,180,252)]">
+                    📖 Yearbook
+                </button>
+                <button onclick="openGeneratorModal('wallpaper')" class="flex-1 btn-3d bg-indigo-800 text-white border-2 border-indigo-400 px-5 py-2.5 rounded-xl text-sm md:text-md font-black shadow-[0_4px_0_rgb(49,46,129)]">
+                    📱 Wallpaper
+                </button>
+            </div>
+        </div>
+
         <div id="mainScrollArea" class="smooth-scroll flex-1 overflow-y-auto px-1 pb-20 no-scrollbar">
             <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8"></div>
         </div>
     </main>
+
+    <div id="generatorModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeGeneratorModal()"></div>
+        <div class="smooth-scroll relative bg-white rounded-[2rem] border-4 border-purple-400 shadow-[0_12px_0_rgb(192,132,252)] w-full max-w-md p-5 md:p-8 z-10 max-h-[90dvh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-5">
+                <h2 id="genModalTitle" class="text-2xl font-black text-slate-800">🛠️ Generator Tools</h2>
+                <button onclick="closeGeneratorModal()" class="text-slate-400 hover:text-red-500 bg-slate-100 rounded-full w-10 h-10 flex items-center justify-center"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            
+            <form id="generatorForm" class="space-y-4">
+                <input type="hidden" id="genType" value="yearbook">
+                
+                <div>
+                    <label class="block font-bold text-slate-700 mb-2">Whose Art?</label>
+                    <select id="genKidSelect" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 outline-none"></select>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block font-bold text-slate-700 mb-2 text-sm">Start Month <span class="text-slate-400 font-normal">(Optional)</span></label>
+                        <input type="month" id="genStart" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-700 outline-none">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block font-bold text-slate-700 mb-2 text-sm">End Month <span class="text-slate-400 font-normal">(Optional)</span></label>
+                        <input type="month" id="genEnd" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-700 outline-none">
+                    </div>
+                </div>
+
+                <div class="bg-purple-50 p-4 rounded-xl border-2 border-purple-100 mt-2">
+                    <p class="text-xs font-bold text-purple-600"><i class="fa-solid fa-circle-info mr-1"></i> Leave dates blank to include all artwork ever uploaded for the selected artist(s).</p>
+                </div>
+
+                <button type="submit" id="genSubmitBtn" class="btn-3d w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black text-lg py-4 rounded-xl shadow-[0_6px_0_rgb(88,28,135)] mt-4">
+                    Create Masterpiece ✨
+                </button>
+            </form>
+        </div>
+    </div>
 
     <div id="uploadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeUploadModal()"></div>
@@ -294,7 +329,6 @@
           measurementId: "G-2R4S0X7HKR"
         };
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
@@ -305,12 +339,10 @@
         // ==========================================
         auth.onAuthStateChanged(user => {
             if (user) {
-                // User is signed in.
                 document.getElementById('loginOverlay').classList.add('hidden');
                 document.getElementById('loadingOverlay').style.display = 'flex';
                 loadDataFromFirebase();
             } else {
-                // No user is signed in.
                 document.getElementById('loginOverlay').classList.remove('hidden');
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
@@ -328,21 +360,11 @@
             errorTxt.classList.add('hidden');
 
             auth.signInWithEmailAndPassword(email, pass)
-                .then(() => {
-                    btn.innerText = 'Unlock Archive 🔓';
-                    btn.disabled = false;
-                })
-                .catch((error) => {
-                    errorTxt.innerText = error.message;
-                    errorTxt.classList.remove('hidden');
-                    btn.innerText = 'Unlock Archive 🔓';
-                    btn.disabled = false;
-                });
+                .then(() => { btn.innerText = 'Unlock Archive 🔓'; btn.disabled = false; })
+                .catch((error) => { errorTxt.innerText = error.message; errorTxt.classList.remove('hidden'); btn.innerText = 'Unlock Archive 🔓'; btn.disabled = false; });
         });
 
-        function logout() {
-            auth.signOut();
-        }
+        function logout() { auth.signOut(); }
 
         // ==========================================
         // APP LOGIC
@@ -395,12 +417,8 @@
         async function loadDataFromFirebase() {
             try {
                 const kidsSnap = await db.collection('kids').get();
-                if (!kidsSnap.empty) {
-                    kids = kidsSnap.docs.map(doc => doc.data());
-                } else {
-                    kids = [...defaultKids];
-                    kids.forEach(k => db.collection('kids').doc(k.id).set(k));
-                }
+                if (!kidsSnap.empty) { kids = kidsSnap.docs.map(doc => doc.data()); } 
+                else { kids = [...defaultKids]; kids.forEach(k => db.collection('kids').doc(k.id).set(k)); }
 
                 const artSnap = await db.collection('artworks').orderBy('id', 'desc').get();
                 artworks = artSnap.docs.map(doc => doc.data());
@@ -424,9 +442,7 @@
             renderEmojiGrid(); renderColorSwatches(); renderMoodPicker(); setupImagePreview();
         });
 
-        function updateAllUI() {
-            renderTabs(); renderGallery(); renderUploadDropdown(); renderManageList();
-        }
+        function updateAllUI() { renderTabs(); renderGallery(); renderUploadDropdown(); renderManageList(); renderGeneratorDropdown(); }
 
         function toggleSearch() {
             const el = document.getElementById('mobileSearch'); el.classList.toggle('hidden');
@@ -523,7 +539,7 @@
                 return `
                 <div class="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-slate-100 p-2.5 md:p-3 shadow-lg hover:-translate-y-1 transition group card-enter" style="animation-delay: ${index * 0.05}s">
                     <div class="h-44 md:h-56 overflow-hidden rounded-xl md:rounded-2xl bg-slate-100 relative border-2 border-slate-100 cursor-pointer" onclick="openLightbox(${art.id})">
-                        <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 loading="lazy"">
+                        <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" loading="lazy">
                         ${art.mood ? `<div class="absolute top-2 left-2 text-2xl bg-white/80 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">${art.mood}</div>` : ''}
                         <div class="absolute top-2 right-2">
                             <button onclick="event.stopPropagation(); toggleFavorite(${art.id})" class="fav-star text-2xl ${isFav ? 'active' : 'text-white/60 hover:text-amber-400'} drop-shadow-lg">${isFav ? '⭐' : '☆'}</button>
@@ -728,8 +744,154 @@
             }
         }
 
+        // ==========================================
+        // NEW GENERATOR LOGIC
+        // ==========================================
+        function openGeneratorModal(type) {
+            document.getElementById('genType').value = type;
+            document.getElementById('genModalTitle').innerHTML = type === 'yearbook' ? '📖 Generate Yearbook' : '📱 Create Wallpaper';
+            document.getElementById('generatorModal').classList.remove('hidden');
+        }
+        
+        function closeGeneratorModal() {
+            document.getElementById('generatorModal').classList.add('hidden');
+            document.getElementById('generatorForm').reset();
+        }
+
+        function renderGeneratorDropdown() {
+            const select = document.getElementById('genKidSelect');
+            select.innerHTML = '<option value="All">🌟 All Family Art</option>' + 
+                kids.filter(k => !k.isBase).map(k => `<option value="${k.name}">${k.icon} ${k.name} Only</option>`).join('');
+        }
+
+        document.getElementById('generatorForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const type = document.getElementById('genType').value;
+            const kid = document.getElementById('genKidSelect').value;
+            const start = document.getElementById('genStart').value;
+            const end = document.getElementById('genEnd').value;
+
+            // 1. Filter the artworks
+            let filtered = [...artworks];
+            if (kid !== 'All') filtered = filtered.filter(a => a.childName === kid);
+
+            if (start) {
+                const startDate = new Date(start);
+                filtered = filtered.filter(a => new Date(a.date) >= startDate);
+            }
+            if (end) {
+                const endDate = new Date(end);
+                endDate.setMonth(endDate.getMonth() + 1); // push to end of selected month
+                filtered = filtered.filter(a => new Date(a.date) < endDate);
+            }
+
+            if(filtered.length === 0) return alert("Oops! No artwork matches those filters. Try a different date or child.");
+
+            const btn = document.getElementById('genSubmitBtn');
+            btn.innerText = "Processing Canvas... ⏳";
+            btn.disabled = true;
+
+            try {
+                // 2. Setup Canvas
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                if (type === 'wallpaper') {
+                    canvas.width = 1080;
+                    canvas.height = 1920; // 9:16 vertical phone
+                } else {
+                    canvas.width = 2480;
+                    canvas.height = 1754; // A4 landscape print
+                }
+
+                // Calculate Grid (Square-ish layout)
+                const cols = Math.ceil(Math.sqrt(filtered.length));
+                const rows = Math.ceil(filtered.length / cols);
+                const cellW = canvas.width / cols;
+                const cellH = canvas.height / rows;
+
+                // 3. Load Images via Promise
+                const imagesToDraw = await Promise.all(filtered.map(art => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = "Anonymous"; // Crucial to prevent Canvas tainting
+                        img.onload = () => resolve({img, art});
+                        img.onerror = () => { console.warn("Failed to load:", art.imageUrl); resolve(null); };
+                        img.src = art.imageUrl;
+                    });
+                }));
+
+                const validImages = imagesToDraw.filter(i => i !== null);
+
+                // Draw solid background
+                ctx.fillStyle = type === 'wallpaper' ? '#1e293b' : '#f8fafc';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 4. Draw each image cropped perfectly into its grid cell
+                validImages.forEach((item, index) => {
+                    const c = index % cols;
+                    const r = Math.floor(index / cols);
+                    const x = c * cellW;
+                    const y = r * cellH;
+                    const padding = type === 'wallpaper' ? 5 : 20;
+
+                    const imgRatio = item.img.width / item.img.height;
+                    const cellRatio = cellW / cellH;
+                    let drawW = cellW;
+                    let drawH = cellH;
+                    let drawX = x;
+                    let drawY = y;
+
+                    // Math to object-fit: cover
+                    if (imgRatio > cellRatio) {
+                        drawW = cellH * imgRatio;
+                        drawX = x - (drawW - cellW) / 2;
+                    } else {
+                        drawH = cellW / imgRatio;
+                        drawY = y - (drawH - cellH) / 2;
+                    }
+
+                    // Clip to cell with padding
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.roundRect ? ctx.roundRect(x + padding, y + padding, cellW - (padding*2), cellH - (padding*2), 20) : ctx.rect(x + padding, y + padding, cellW - (padding*2), cellH - (padding*2));
+                    ctx.clip();
+                    ctx.drawImage(item.img, drawX, drawY, drawW, drawH);
+                    ctx.restore();
+
+                    // Optional label for yearbooks
+                    if(type === 'yearbook') {
+                        const dateStr = new Date(item.art.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                        ctx.fillRect(x + padding, y + cellH - 60 - padding, cellW - (padding*2), 60);
+                        ctx.fillStyle = '#1e293b';
+                        ctx.font = 'bold 24px sans-serif';
+                        ctx.fillText(`${item.art.theme}`, x + padding + 15, y + cellH - 30 - padding);
+                        ctx.font = '18px sans-serif';
+                        ctx.fillStyle = '#64748b';
+                        ctx.fillText(`${item.art.childName} • ${dateStr}`, x + padding + 15, y + cellH - 10 - padding);
+                    }
+                });
+
+                // 5. Download the file
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                const link = document.createElement('a');
+                link.download = `ArtArchive_${type}_${Date.now()}.jpg`;
+                link.href = dataUrl;
+                link.click();
+
+            } catch (err) {
+                console.error(err);
+                alert("Generation failed. Did you configure Firebase CORS settings in the Google Cloud Shell?");
+            } finally {
+                btn.innerText = "Create Masterpiece ✨";
+                btn.disabled = false;
+                closeGeneratorModal();
+            }
+        });
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { closeLightbox(); closeUploadModal(); closeManageModal(); }
+            if (e.key === 'Escape') { closeLightbox(); closeUploadModal(); closeManageModal(); closeGeneratorModal(); }
         });
     </script>
 </body>
