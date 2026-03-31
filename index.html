@@ -894,5 +894,15 @@
             if (e.key === 'Escape') { closeLightbox(); closeUploadModal(); closeManageModal(); closeGeneratorModal(); }
         });
     </script>
+    <script>
+        // Register Service Worker for App Installation
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log("Service Worker Registered!"))
+            .catch(err => console.error("Service Worker failed", err));
+        }
+    </script>
+</body>
+</html>
 </body>
 </html>
