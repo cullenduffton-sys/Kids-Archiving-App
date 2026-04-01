@@ -164,7 +164,7 @@
         </div>
 
         <div id="mainScrollArea" class="px-1 pb-20">
-            <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8"></div>
+            <div id="galleryGrid" class="flex flex-col gap-8 md:gap-10"></div>
         </div>
     </main>
 
@@ -415,7 +415,6 @@
         let searchQuery = '';
         let sortMode = 'newest';
         
-        // ADDED VARIABLES FOR CAROUSEL
         let currentGalleryView = []; 
         let currentLightboxIndex = 0; 
 
@@ -526,6 +525,9 @@
         }
         function setActiveTab(name) { activeTab = name; renderTabs(); renderGallery(); }
 
+        // ==========================================
+        // UPGRADED RENDER GALLERY (GROUPS BY MONTH/YEAR)
+        // ==========================================
         function renderGallery() {
             const gallery = document.getElementById('galleryGrid');
             let filteredArt = activeTab === 'All' ? [...artworks] : artworks.filter(art => art.childName === activeTab);
@@ -541,18 +543,48 @@
             if (filteredArt.length === 0) {
                 const msg = searchQuery ? 'No results found' : 'No artwork here yet!';
                 const icon = searchQuery ? '🔍' : '🖼️';
-                gallery.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center text-slate-400 py-16 md:py-20 bg-white/50 rounded-[2rem] md:rounded-[3rem] border-4 border-dashed border-slate-200 mt-4"><div class="text-6xl md:text-7xl mb-4 empty-bounce">${icon}</div><p class="text-lg md:text-2xl font-black text-slate-600 text-center px-4">${msg}</p></div>`;
+                gallery.innerHTML = `<div class="w-full flex flex-col items-center justify-center text-slate-400 py-16 md:py-20 bg-white/50 rounded-[2rem] md:rounded-[3rem] border-4 border-dashed border-slate-200 mt-4"><div class="text-6xl md:text-7xl mb-4 empty-bounce">${icon}</div><p class="text-lg md:text-2xl font-black text-slate-600 text-center px-4">${msg}</p></div>`;
                 return;
             }
 
-            gallery.innerHTML = filteredArt.map((art, index) => {
+            let html = '';
+            let currentGroup = '';
+
+            filteredArt.forEach((art, index) => {
                 const kidObj = kids.find(k => k.name === art.childName) || kids[0];
                 const reactions = art.reactions || {};
                 const reactionEmojis = ['❤️','😍','🔥','👏','🌟'];
                 const isFav = art.favorite;
                 
-                return `
-                <div class="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-slate-100 p-2.5 md:p-3 shadow-lg hover:-translate-y-1 transition group card-enter" style="animation-delay: ${index * 0.05}s">
+                // Determine the group header (Month/Year OR First Letter if sorting A-Z)
+                let groupLabel = '';
+                let groupIcon = '';
+                
+                if (sortMode === 'alpha') {
+                    groupLabel = art.theme.charAt(0).toUpperCase();
+                    groupIcon = '🔤';
+                } else {
+                    const dateObj = new Date(art.date);
+                    groupLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    groupIcon = '📅';
+                }
+
+                // If the group has changed, close the old grid and start a new section!
+                if (groupLabel !== currentGroup) {
+                    if (currentGroup !== '') html += `</div></div>`; // close previous grid
+                    currentGroup = groupLabel;
+                    html += `
+                    <div class="group-section">
+                        <div class="flex items-center gap-3 mb-4 pl-1">
+                            <span class="text-xl bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm -rotate-3 border-2 border-indigo-200">${groupIcon}</span>
+                            <h2 class="text-xl md:text-2xl font-black text-slate-700 tracking-tight">${currentGroup}</h2>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8">
+                    `;
+                }
+                
+                html += `
+                <div class="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-slate-100 p-2.5 md:p-3 shadow-lg hover:-translate-y-1 transition group card-enter" style="animation-delay: ${(index % 10) * 0.05}s">
                     <div class="h-44 md:h-56 overflow-hidden rounded-xl md:rounded-2xl bg-slate-100 relative border-2 border-slate-100 cursor-pointer" onclick="openLightbox(${art.id})">
                         <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" loading="lazy">
                         ${art.mood ? `<div class="absolute top-2 left-2 text-2xl bg-white/80 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">${art.mood}</div>` : ''}
@@ -580,7 +612,11 @@
                         </div>
                     </div>
                 </div>`;
-            }).join('');
+            });
+
+            if (currentGroup !== '') html += `</div></div>`; // close the final grid
+
+            gallery.innerHTML = html;
         }
 
         function toggleReaction(artId, emoji, event) {
@@ -603,9 +639,6 @@
             art.favorite = !art.favorite; saveArtToDB(art); renderGallery();
         }
 
-        // ==========================================
-        // NEW LIGHTBOX CAROUSEL LOGIC
-        // ==========================================
         function updateLightboxUI() {
             const art = currentGalleryView[currentLightboxIndex];
             const kidObj = kids.find(k => k.name === art.childName) || kids[0];
@@ -684,7 +717,6 @@
                             setActiveTab(childName);
                             btn.disabled = false;
                             
-                            // Updated this line to scroll the main window, not the internal box
                             setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
                         });
                     }
