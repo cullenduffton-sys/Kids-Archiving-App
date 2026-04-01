@@ -24,7 +24,6 @@
             background-color: #f8fafc;
             background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px);
             background-size: 30px 30px;
-            overscroll-behavior-y: none; 
         }
         
         .smooth-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
@@ -73,7 +72,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="text-slate-800 h-[100dvh] overflow-hidden flex flex-col">
+<body class="text-slate-800 min-h-screen flex flex-col">
 
     <div id="loginOverlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100000] flex items-center justify-center p-4">
         <div class="bg-white rounded-[2rem] border-4 border-indigo-400 shadow-[0_12px_0_rgb(129,140,248)] w-full max-w-sm p-8 text-center">
@@ -97,7 +96,7 @@
         <p class="font-bold text-slate-500" id="loadingText">Authenticating...</p>
     </div>
 
-    <header class="bg-white/90 backdrop-blur-md shadow-sm px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center z-10 border-b-4 border-indigo-100 gap-3 md:gap-4 shrink-0">
+    <header class="sticky top-0 bg-white/90 backdrop-blur-md shadow-sm px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center z-[40] border-b-4 border-indigo-100 gap-3 md:gap-4 shrink-0">
         <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
             <div class="flex items-center gap-3">
                 <div class="bg-indigo-500 text-white p-3 rounded-2xl shadow-md transform -rotate-6">
@@ -143,7 +142,7 @@
         </div>
     </div>
 
-    <main class="flex-1 min-h-0 overflow-hidden flex flex-col p-3 md:p-6 max-w-7xl mx-auto w-full">
+    <main class="flex-1 flex flex-col p-3 md:p-6 max-w-7xl mx-auto w-full">
         <div class="smooth-scroll flex gap-3 mb-4 md:mb-6 overflow-x-auto no-scrollbar pb-3 pt-2 px-1 shrink-0" id="kidsTabs"></div>
 
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 text-white flex flex-col sm:flex-row justify-between items-center mb-4 md:mb-6 shadow-xl border-4 border-purple-300 transform transition hover:scale-[1.01] shrink-0 gap-4">
@@ -164,7 +163,7 @@
             </div>
         </div>
 
-        <div id="mainScrollArea" class="smooth-scroll flex-1 overflow-y-auto px-1 pb-20 no-scrollbar">
+        <div id="mainScrollArea" class="px-1 pb-20">
             <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8"></div>
         </div>
     </main>
@@ -685,7 +684,8 @@
                             setActiveTab(childName);
                             btn.disabled = false;
                             
-                            setTimeout(() => { document.getElementById('mainScrollArea').scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
+                            // Updated this line to scroll the main window, not the internal box
+                            setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
                         });
                     }
                 );
