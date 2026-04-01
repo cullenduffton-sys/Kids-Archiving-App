@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<index.html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -210,7 +210,7 @@
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeUploadModal()"></div>
         <div class="smooth-scroll relative bg-white rounded-[2rem] border-4 border-indigo-400 shadow-[0_12px_0_rgb(129,140,248)] w-full max-w-md p-5 md:p-8 z-10 max-h-[90dvh] overflow-y-auto overscroll-contain">
             <div class="flex justify-between items-center mb-5">
-                <h2 class="text-2xl font-black text-slate-800">🎨 New Art</h2>
+                <h2 id="uploadModalTitle" class="text-2xl font-black text-slate-800">🎨 New Art</h2>
                 <button onclick="closeUploadModal()" class="text-slate-400 hover:text-pink-500 bg-slate-100 rounded-full w-10 h-10 flex items-center justify-center"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
             <form id="uploadForm" class="space-y-4">
@@ -238,7 +238,7 @@
                     </div>
                     <div id="imagePreview" class="hidden flex-col items-center gap-2">
                         <img id="previewImg" class="preview-img w-full" />
-                        <button type="button" onclick="clearImagePreview()" class="text-red-500 text-sm font-bold hover:underline">✕ Remove</button>
+                        <button type="button" onclick="clearImagePreview()" class="text-red-500 text-sm font-bold hover:underline">✕ Remove & Replace</button>
                     </div>
                 </div>
                 <button type="submit" id="uploadBtn" class="btn-3d w-full bg-indigo-600 text-white font-black text-lg py-4 rounded-xl shadow-[0_6px_0_rgb(67,56,202)] mt-4">Save to Archive! 🚀</button>
@@ -409,6 +409,7 @@
         
         let activeTab = 'All';
         let editingKidId = null;
+        let editingArtId = null; // Tracks if we are editing an existing photo
         let selectedEmoji = '👦';
         let selectedColor = 'bg-red-500';
         let selectedMood = '';
@@ -510,7 +511,13 @@
                 }
             });
         }
-        function clearImagePreview() { document.getElementById('artImage').value = ''; document.getElementById('dropZoneContent').classList.remove('hidden'); document.getElementById('imagePreview').classList.add('hidden'); document.getElementById('imagePreview').classList.remove('flex'); }
+        function clearImagePreview() { 
+            document.getElementById('artImage').value = ''; 
+            document.getElementById('dropZoneContent').classList.remove('hidden'); 
+            document.getElementById('imagePreview').classList.add('hidden'); 
+            document.getElementById('imagePreview').classList.remove('flex'); 
+            document.getElementById('artImage').required = true; // force new upload if they removed the preview
+        }
 
         function renderTabs() {
             const tabsContainer = document.getElementById('kidsTabs');
@@ -526,7 +533,7 @@
         function setActiveTab(name) { activeTab = name; renderTabs(); renderGallery(); }
 
         // ==========================================
-        // FIXED RENDER GALLERY (GROUPS BY ACTUAL DATE + COLLAPSIBLE)
+        // FIXED RENDER GALLERY WITH PRE-COUNTING AND EDIT BUTTON
         // ==========================================
         function renderGallery() {
             const gallery = document.getElementById('galleryGrid');
@@ -534,7 +541,6 @@
             
             if (searchQuery) filteredArt = filteredArt.filter(art => art.theme.toLowerCase().includes(searchQuery) || art.childName.toLowerCase().includes(searchQuery));
             
-            // FIX: Sort by the actual Date string first so the months perfectly clump together!
             if (sortMode === 'newest') {
                 filteredArt.sort((a, b) => new Date(b.date) - new Date(a.date) || b.id - a.id);
             } else if (sortMode === 'oldest') {
@@ -552,15 +558,9 @@
                 return;
             }
 
-            let html = '';
-            let currentGroup = '';
-
-            filteredArt.forEach((art, index) => {
-                const kidObj = kids.find(k => k.name === art.childName) || kids[0];
-                const reactions = art.reactions || {};
-                const reactionEmojis = ['❤️','😍','🔥','👏','🌟'];
-                const isFav = art.favorite;
-                
+            // 1. Pre-group the artwork to easily count them
+            const groupedArt = [];
+            filteredArt.forEach(art => {
                 let groupLabel = '';
                 let groupIcon = '';
                 
@@ -573,60 +573,75 @@
                     groupIcon = '📅';
                 }
 
-                if (groupLabel !== currentGroup) {
-                    if (currentGroup !== '') html += `</div></div>`; 
-                    currentGroup = groupLabel;
-                    
-                    // Create a safe ID to link the button to the collapsing grid
-                    let safeId = currentGroup.replace(/[^a-zA-Z0-9]/g, '-');
-
-                    html += `
-                    <div class="group-section">
-                        <div class="flex items-center justify-between gap-3 mb-4 cursor-pointer bg-white/50 hover:bg-indigo-50/50 p-2 pr-4 rounded-2xl transition" onclick="toggleGroup('grid-${safeId}', 'icon-${safeId}')">
-                            <div class="flex items-center gap-3">
-                                <span class="text-xl bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm -rotate-3 border-2 border-indigo-200">${groupIcon}</span>
-                                <h2 class="text-xl md:text-2xl font-black text-slate-700 tracking-tight">${currentGroup}</h2>
-                            </div>
-                            <div class="text-slate-400 bg-white shadow-sm w-8 h-8 rounded-full flex items-center justify-center border-2 border-slate-100">
-                                <i id="icon-${safeId}" class="fa-solid fa-chevron-up transition-transform duration-300"></i>
-                            </div>
-                        </div>
-                        <div id="grid-${safeId}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8">
-                    `;
+                let existingGroup = groupedArt.find(g => g.label === groupLabel);
+                if (!existingGroup) {
+                    existingGroup = { label: groupLabel, icon: groupIcon, artworks: [] };
+                    groupedArt.push(existingGroup);
                 }
-                
-                html += `
-                <div class="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-slate-100 p-2.5 md:p-3 shadow-lg hover:-translate-y-1 transition group card-enter" style="animation-delay: ${(index % 10) * 0.05}s">
-                    <div class="h-44 md:h-56 overflow-hidden rounded-xl md:rounded-2xl bg-slate-100 relative border-2 border-slate-100 cursor-pointer" onclick="openLightbox(${art.id})">
-                        <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" loading="lazy">
-                        ${art.mood ? `<div class="absolute top-2 left-2 text-2xl bg-white/80 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">${art.mood}</div>` : ''}
-                        <div class="absolute top-2 right-2">
-                            <button onclick="event.stopPropagation(); toggleFavorite(${art.id})" class="fav-star text-2xl ${isFav ? 'active' : 'text-white/60 hover:text-amber-400'} drop-shadow-lg">${isFav ? '⭐' : '☆'}</button>
-                        </div>
-                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-sm">
-                            <button class="btn-3d bg-white text-indigo-600 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); openLightbox(${art.id})"><i class="fa-solid fa-expand"></i></button>
-                            <button class="btn-3d bg-white text-red-500 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); deleteArt(${art.id})"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </div>
-                    <div class="p-2.5 md:p-3 pt-3 md:pt-4">
-                        <div class="flex justify-between items-start mb-1.5 gap-2">
-                            <h3 class="font-black text-base md:text-lg text-slate-800 truncate">${art.theme}</h3>
-                            <span class="text-[10px] md:text-xs font-black px-2 py-1 rounded-lg ${kidObj.color} text-white whitespace-nowrap">${kidObj.icon} ${art.childName}</span>
-                        </div>
-                        <p class="text-xs font-bold text-slate-400 mb-3"><i class="fa-regular fa-calendar mr-1"></i> ${new Date(art.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                        
-                        <div class="flex items-center gap-1 flex-wrap border-t-2 border-slate-50 pt-2.5">
-                            ${reactionEmojis.map(emoji => {
-                                const count = reactions[emoji] || 0;
-                                const isActive = (art.userReactions || []).includes(emoji);
-                                return `<button onclick="toggleReaction(${art.id}, '${emoji}', event)" class="reaction-btn flex items-center gap-0.5 text-sm px-1.5 py-0.5 rounded-lg border-2 ${isActive ? 'border-indigo-300 bg-indigo-50' : 'border-transparent hover:bg-slate-50'}">${emoji}${count > 0 ? `<span class="text-xs font-black text-slate-500">${count}</span>` : ''}</button>`;
-                            }).join('')}
-                        </div>
-                    </div>
-                </div>`;
+                existingGroup.artworks.push(art);
             });
 
-            if (currentGroup !== '') html += `</div></div>`;
+            // 2. Generate HTML from grouped data
+            let html = '';
+            groupedArt.forEach(group => {
+                let safeId = group.label.replace(/[^a-zA-Z0-9]/g, '-');
+                
+                html += `
+                <div class="group-section">
+                    <div class="flex items-center justify-between gap-3 mb-4 cursor-pointer bg-white/50 hover:bg-indigo-50/50 p-2 pr-4 rounded-2xl transition" onclick="toggleGroup('grid-${safeId}', 'icon-${safeId}')">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm -rotate-3 border-2 border-indigo-200">${group.icon}</span>
+                            <h2 class="text-xl md:text-2xl font-black text-slate-700 tracking-tight flex items-center gap-2">
+                                ${group.label}
+                                <span class="text-sm font-bold text-slate-400 bg-white px-2.5 py-1 rounded-xl shadow-sm border-2 border-slate-100">${group.artworks.length}</span>
+                            </h2>
+                        </div>
+                        <div class="text-slate-400 bg-white shadow-sm w-8 h-8 rounded-full flex items-center justify-center border-2 border-slate-100">
+                            <i id="icon-${safeId}" class="fa-solid fa-chevron-up transition-transform duration-300"></i>
+                        </div>
+                    </div>
+                    <div id="grid-${safeId}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8">
+                `;
+                
+                group.artworks.forEach((art, index) => {
+                    const kidObj = kids.find(k => k.name === art.childName) || kids[0];
+                    const reactions = art.reactions || {};
+                    const reactionEmojis = ['❤️','😍','🔥','👏','🌟'];
+                    const isFav = art.favorite;
+
+                    html += `
+                    <div class="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-slate-100 p-2.5 md:p-3 shadow-lg hover:-translate-y-1 transition group card-enter" style="animation-delay: ${(index % 10) * 0.05}s">
+                        <div class="h-44 md:h-56 overflow-hidden rounded-xl md:rounded-2xl bg-slate-100 relative border-2 border-slate-100 cursor-pointer" onclick="openLightbox(${art.id})">
+                            <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" loading="lazy">
+                            ${art.mood ? `<div class="absolute top-2 left-2 text-2xl bg-white/80 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">${art.mood}</div>` : ''}
+                            <div class="absolute top-2 right-2">
+                                <button onclick="event.stopPropagation(); toggleFavorite(${art.id})" class="fav-star text-2xl ${isFav ? 'active' : 'text-white/60 hover:text-amber-400'} drop-shadow-lg">${isFav ? '⭐' : '☆'}</button>
+                            </div>
+                            <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
+                                <button class="btn-3d bg-white text-indigo-600 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); openLightbox(${art.id})"><i class="fa-solid fa-expand"></i></button>
+                                <button class="btn-3d bg-white text-emerald-500 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); editArt(${art.id})"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn-3d bg-white text-red-500 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); deleteArt(${art.id})"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="p-2.5 md:p-3 pt-3 md:pt-4">
+                            <div class="flex justify-between items-start mb-1.5 gap-2">
+                                <h3 class="font-black text-base md:text-lg text-slate-800 truncate">${art.theme}</h3>
+                                <span class="text-[10px] md:text-xs font-black px-2 py-1 rounded-lg ${kidObj.color} text-white whitespace-nowrap">${kidObj.icon} ${art.childName}</span>
+                            </div>
+                            <p class="text-xs font-bold text-slate-400 mb-3"><i class="fa-regular fa-calendar mr-1"></i> ${new Date(art.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                            
+                            <div class="flex items-center gap-1 flex-wrap border-t-2 border-slate-50 pt-2.5">
+                                ${reactionEmojis.map(emoji => {
+                                    const count = reactions[emoji] || 0;
+                                    const isActive = (art.userReactions || []).includes(emoji);
+                                    return `<button onclick="toggleReaction(${art.id}, '${emoji}', event)" class="reaction-btn flex items-center gap-0.5 text-sm px-1.5 py-0.5 rounded-lg border-2 ${isActive ? 'border-indigo-300 bg-indigo-50' : 'border-transparent hover:bg-slate-50'}">${emoji}${count > 0 ? `<span class="text-xs font-black text-slate-500">${count}</span>` : ''}</button>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            });
 
             gallery.innerHTML = html;
         }
@@ -697,55 +712,123 @@
         }
 
         function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
-        function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); document.getElementById('uploadForm').reset(); selectedMood = ''; renderMoodPicker(); clearImagePreview(); document.getElementById('uploadBtn').innerText = "Save to Archive! 🚀"; }
+        
+        function closeUploadModal() { 
+            document.getElementById('uploadModal').classList.add('hidden'); 
+            document.getElementById('uploadForm').reset(); 
+            selectedMood = ''; 
+            renderMoodPicker(); 
+            clearImagePreview(); 
+            
+            // Reset Edit state
+            editingArtId = null;
+            document.getElementById('uploadModalTitle').innerText = '🎨 New Art';
+            document.getElementById('uploadBtn').innerText = "Save to Archive! 🚀";
+            document.getElementById('artImage').required = true;
+        }
+
+        // ==========================================
+        // EDIT ART LOGIC
+        // ==========================================
+        function editArt(id) {
+            editingArtId = id;
+            const art = artworks.find(a => a.id === id);
+            if (!art) return;
+
+            // Populate form
+            document.getElementById('childSelect').value = art.childName;
+            document.getElementById('artDate').value = art.date;
+            document.getElementById('artTheme').value = art.theme;
+            
+            selectedMood = art.mood || '';
+            renderMoodPicker();
+
+            // Populate Image
+            document.getElementById('previewImg').src = art.imageUrl;
+            document.getElementById('dropZoneContent').classList.add('hidden');
+            document.getElementById('imagePreview').classList.remove('hidden');
+            document.getElementById('imagePreview').classList.add('flex');
+            
+            // Make image upload optional during edit
+            document.getElementById('artImage').required = false; 
+
+            // Update UI
+            document.getElementById('uploadModalTitle').innerText = '✏️ Edit Art';
+            document.getElementById('uploadBtn').innerText = 'Save Changes! ✨';
+
+            document.getElementById('uploadModal').classList.remove('hidden');
+        }
 
         function renderUploadDropdown() {
             const select = document.getElementById('childSelect'); const actualKids = kids.filter(k => !k.isBase);
             select.innerHTML = actualKids.length === 0 ? `<option value="" disabled selected>Add a child first!</option>` : actualKids.map(k => `<option value="${k.name}">${k.icon} ${k.name} (Age: ${k.age})</option>`).join('');
         }
 
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault(); 
             const file = document.getElementById('artImage').files[0];
             const childName = document.getElementById('childSelect').value;
+            const artDate = document.getElementById('artDate').value;
+            const artTheme = document.getElementById('artTheme').value;
+            
             if (!childName) return alert("Please add a child profile first!");
             
-            if (file) {
-                const btn = document.getElementById('uploadBtn');
-                btn.innerText = "Uploading to Cloud... ⏳";
-                btn.disabled = true;
+            const btn = document.getElementById('uploadBtn');
+            btn.innerText = "Saving... ⏳";
+            btn.disabled = true;
 
-                const storageRef = storage.ref(`artworks/${Date.now()}_${file.name}`);
-                const uploadTask = storageRef.put(file);
+            try {
+                let downloadURL = '';
 
-                uploadTask.on('state_changed', 
-                    (snapshot) => { }, 
-                    (error) => { alert("Upload failed: " + error.message); btn.innerText = "Save to Archive! 🚀"; btn.disabled = false; }, 
-                    () => {
-                        uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                            const newArt = { 
-                                id: Date.now(), 
-                                childName, 
-                                date: document.getElementById('artDate').value, 
-                                theme: document.getElementById('artTheme').value, 
-                                imageUrl: downloadURL,
-                                mood: selectedMood,
-                                reactions: {},
-                                userReactions: [],
-                                favorite: false
-                            };
+                // If user selected a new file, upload it
+                if (file) {
+                    const storageRef = storage.ref(`artworks/${Date.now()}_${file.name}`);
+                    const snapshot = await storageRef.put(file);
+                    downloadURL = await snapshot.ref.getDownloadURL();
+                } 
+                // If editing and didn't select a new file, keep the old one
+                else if (editingArtId) {
+                    const existingArt = artworks.find(a => a.id === editingArtId);
+                    downloadURL = existingArt.imageUrl;
+                }
 
-                            artworks.unshift(newArt);
-                            saveArtToDB(newArt);
-                            
-                            closeUploadModal();
-                            setActiveTab(childName);
-                            btn.disabled = false;
-                            
-                            setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
-                        });
+                if (editingArtId) {
+                    // Update existing Art
+                    const artIndex = artworks.findIndex(a => a.id === editingArtId);
+                    if (artIndex > -1) {
+                        artworks[artIndex].childName = childName;
+                        artworks[artIndex].date = artDate;
+                        artworks[artIndex].theme = artTheme;
+                        artworks[artIndex].mood = selectedMood;
+                        if (file) artworks[artIndex].imageUrl = downloadURL; // only overwrite URL if new file uploaded
+                        
+                        saveArtToDB(artworks[artIndex]);
                     }
-                );
+                } else {
+                    // Create New Art
+                    const newArt = { 
+                        id: Date.now(), 
+                        childName, 
+                        date: artDate, 
+                        theme: artTheme, 
+                        imageUrl: downloadURL,
+                        mood: selectedMood,
+                        reactions: {},
+                        userReactions: [],
+                        favorite: false
+                    };
+                    artworks.unshift(newArt);
+                    saveArtToDB(newArt);
+                }
+                
+                closeUploadModal();
+                setActiveTab(childName);
+                if(!editingArtId) setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
+
+            } catch (error) {
+                alert("Upload failed: " + error.message);
+            } finally {
+                btn.disabled = false;
             }
         });
 
