@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ArtArchive | Kids Artwork Tracker</title>
- <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <link rel="icon" type="image/png" href="./ArtArchive-AppIcon-1024x1024.png">
     <link rel="apple-touch-icon" href="./ArtArchive-AppIcon-1024x1024.png">
     <meta name="theme-color" content="#0f172a">
@@ -143,7 +143,7 @@
         </div>
     </div>
 
-    <main class="flex-1 overflow-hidden flex flex-col p-3 md:p-6 max-w-7xl mx-auto w-full">
+    <main class="flex-1 min-h-0 overflow-hidden flex flex-col p-3 md:p-6 max-w-7xl mx-auto w-full">
         <div class="smooth-scroll flex gap-3 mb-4 md:mb-6 overflow-x-auto no-scrollbar pb-3 pt-2 px-1 shrink-0" id="kidsTabs"></div>
 
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 text-white flex flex-col sm:flex-row justify-between items-center mb-4 md:mb-6 shadow-xl border-4 border-purple-300 transform transition hover:scale-[1.01] shrink-0 gap-4">
@@ -303,14 +303,23 @@
         </div>
     </div>
 
-    <div id="lightboxModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-md" onclick="closeLightbox()"></div>
-        <div class="lightbox relative z-10 max-w-3xl w-full max-h-[85dvh] flex flex-col items-center pointer-events-none">
-            <button onclick="closeLightbox()" class="absolute -top-4 -right-4 md:top-2 md:right-2 text-white/80 hover:text-white bg-slate-800/60 rounded-full w-12 h-12 flex items-center justify-center z-20 pointer-events-auto border-2 border-white/20"><i class="fa-solid fa-times text-xl"></i></button>
-            <img id="lightboxImage" class="max-h-[70dvh] w-auto rounded-3xl shadow-2xl border-4 border-white/20 object-contain pointer-events-auto">
-            <div class="mt-4 text-center pointer-events-auto">
-                <h3 id="lightboxTitle" class="text-white text-2xl font-black"></h3>
-                <p id="lightboxMeta" class="text-white/60 font-bold text-sm mt-1"></p>
+    <div id="lightboxModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-2 md:p-4">
+        <div class="absolute inset-0 bg-slate-900/95 backdrop-blur-md" onclick="closeLightbox()"></div>
+        <div class="lightbox relative z-10 w-full max-w-5xl flex flex-col items-center pointer-events-none">
+            
+            <button onclick="closeLightbox()" class="absolute -top-10 right-2 md:-top-4 md:-right-4 text-white/80 hover:text-white bg-slate-800/80 rounded-full w-10 h-10 flex items-center justify-center z-20 pointer-events-auto border-2 border-white/20"><i class="fa-solid fa-times text-xl"></i></button>
+            
+            <div class="flex items-center justify-between w-full pointer-events-auto gap-2">
+                <button onclick="prevImage(event)" class="text-white hover:text-indigo-400 p-2 md:p-4 transition-all drop-shadow-lg"><i class="fa-solid fa-chevron-left text-3xl md:text-5xl"></i></button>
+                
+                <img id="lightboxImage" class="max-h-[75dvh] w-auto max-w-[70vw] md:max-w-[80vw] rounded-2xl md:rounded-3xl shadow-2xl border-4 border-white/10 object-contain">
+                
+                <button onclick="nextImage(event)" class="text-white hover:text-indigo-400 p-2 md:p-4 transition-all drop-shadow-lg"><i class="fa-solid fa-chevron-right text-3xl md:text-5xl"></i></button>
+            </div>
+
+            <div class="mt-4 md:mt-6 text-center pointer-events-auto px-4">
+                <h3 id="lightboxTitle" class="text-white text-xl md:text-3xl font-black drop-shadow-md"></h3>
+                <p id="lightboxMeta" class="text-white/60 font-bold text-xs md:text-base mt-1"></p>
             </div>
         </div>
     </div>
@@ -406,6 +415,10 @@
         let selectedMood = '';
         let searchQuery = '';
         let sortMode = 'newest';
+        
+        // ADDED VARIABLES FOR CAROUSEL
+        let currentGalleryView = []; 
+        let currentLightboxIndex = 0; 
 
         const defaultKids = [
             { id: 'all', name: 'All', icon: '🌟', color: 'bg-slate-800', shadow: 'shadow-[0_4px_0_rgb(30,41,59)]', isBase: true },
@@ -523,6 +536,9 @@
             else if (sortMode === 'oldest') filteredArt.sort((a, b) => a.id - b.id);
             else if (sortMode === 'alpha') filteredArt.sort((a, b) => a.theme.localeCompare(b.theme));
 
+            // STORE CURRENT VIEW FOR CAROUSEL TO USE
+            currentGalleryView = filteredArt;
+
             if (filteredArt.length === 0) {
                 const msg = searchQuery ? 'No results found' : 'No artwork here yet!';
                 const icon = searchQuery ? '🔍' : '🖼️';
@@ -588,15 +604,40 @@
             art.favorite = !art.favorite; saveArtToDB(art); renderGallery();
         }
 
-        function openLightbox(artId) {
-            const art = artworks.find(a => a.id === artId); if (!art) return;
+        // ==========================================
+        // NEW LIGHTBOX CAROUSEL LOGIC
+        // ==========================================
+        function updateLightboxUI() {
+            const art = currentGalleryView[currentLightboxIndex];
             const kidObj = kids.find(k => k.name === art.childName) || kids[0];
             document.getElementById('lightboxImage').src = art.imageUrl;
             document.getElementById('lightboxTitle').textContent = `${art.mood || ''} ${art.theme}`;
             document.getElementById('lightboxMeta').textContent = `by ${kidObj.icon} ${art.childName} (${kidObj.age} yrs) • ${new Date(art.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+        }
+
+        function openLightbox(artId) {
+            currentLightboxIndex = currentGalleryView.findIndex(a => a.id === artId);
+            updateLightboxUI();
             document.getElementById('lightboxModal').classList.remove('hidden');
         }
+
         function closeLightbox() { document.getElementById('lightboxModal').classList.add('hidden'); }
+
+        function prevImage(e) {
+            if (e) e.stopPropagation();
+            if (currentLightboxIndex > 0) {
+                currentLightboxIndex--;
+                updateLightboxUI();
+            }
+        }
+
+        function nextImage(e) {
+            if (e) e.stopPropagation();
+            if (currentLightboxIndex < currentGalleryView.length - 1) {
+                currentLightboxIndex++;
+                updateLightboxUI();
+            }
+        }
 
         function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
         function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); document.getElementById('uploadForm').reset(); selectedMood = ''; renderMoodPicker(); clearImagePreview(); document.getElementById('uploadBtn').innerText = "Save to Archive! 🚀"; }
@@ -817,7 +858,8 @@
                         img.crossOrigin = "Anonymous"; // Crucial to prevent Canvas tainting
                         img.onload = () => resolve({img, art});
                         img.onerror = () => { console.warn("Failed to load:", art.imageUrl); resolve(null); };
-                        img.src = art.imageUrl;
+                        // Cache-buster to bypass stubborn browser security
+                        img.src = art.imageUrl + (art.imageUrl.includes('?') ? '&' : '?') + 'cb=' + new Date().getTime();
                     });
                 }));
 
@@ -892,6 +934,9 @@
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') { closeLightbox(); closeUploadModal(); closeManageModal(); closeGeneratorModal(); }
+            // Added keyboard support for the Carousel
+            if (e.key === 'ArrowLeft' && !document.getElementById('lightboxModal').classList.contains('hidden')) { prevImage(); }
+            if (e.key === 'ArrowRight' && !document.getElementById('lightboxModal').classList.contains('hidden')) { nextImage(); }
         });
     </script>
     <script>
@@ -904,4 +949,3 @@
     </script>
 </body>
 </html>
-
