@@ -17,6 +17,14 @@
       "sizes": "512x512",
       "type": "image/png"
     },
+    "icons": [
+    {
+      "src": "./ArtArchive-AppIcon-1024x1024.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
     {
       "src": "./ArtArchive-AppIcon-1024x1024.png",
       "sizes": "1024x1024",
