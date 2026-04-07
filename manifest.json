@@ -1,40 +1,6 @@
 {
   "name": "ArtArchive",
   "short_name": "ArtArchive",
-  "description": "The Family Artwork Tracker",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#0f172a",
-  "icons": [
-    {
-      "src": "./icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "./icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    "icons": [
-    {
-      "src": "./ArtArchive-AppIcon-1024x1024.jpg",
-      "sizes": "1024x1024",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
-    }
-  ]
-    {
-      "src": "./ArtArchive-AppIcon-1024x1024.png",
-      "sizes": "1024x1024",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
-  {
-  "name": "ArtArchive",
-  "short_name": "ArtArchive",
   "description": "Kids Artwork Tracker",
   "start_url": "./index.html",
   "display": "standalone",
@@ -48,5 +14,4 @@
       "purpose": "any maskable"
     }
   ]
-}
 }
