@@ -313,14 +313,19 @@
             <div class="flex items-center justify-between w-full pointer-events-auto gap-2">
                 <button onclick="prevImage(event)" class="text-white hover:text-indigo-400 p-2 md:p-4 transition-all drop-shadow-lg"><i class="fa-solid fa-chevron-left text-3xl md:text-5xl"></i></button>
                 
-                <img id="lightboxImage" class="max-h-[75dvh] w-auto max-w-[70vw] md:max-w-[80vw] rounded-2xl md:rounded-3xl shadow-2xl border-4 border-white/10 object-contain">
+                <img id="lightboxImage" class="max-h-[70dvh] w-auto max-w-[70vw] md:max-w-[80vw] rounded-2xl md:rounded-3xl shadow-2xl border-4 border-white/10 object-contain">
                 
                 <button onclick="nextImage(event)" class="text-white hover:text-indigo-400 p-2 md:p-4 transition-all drop-shadow-lg"><i class="fa-solid fa-chevron-right text-3xl md:text-5xl"></i></button>
             </div>
 
-            <div class="mt-4 md:mt-6 text-center pointer-events-auto px-4">
+            <div class="mt-4 md:mt-6 text-center pointer-events-auto px-4 w-full flex flex-col items-center">
                 <h3 id="lightboxTitle" class="text-white text-xl md:text-3xl font-black drop-shadow-md"></h3>
-                <p id="lightboxMeta" class="text-white/60 font-bold text-xs md:text-base mt-1"></p>
+                <p id="lightboxMeta" class="text-white/60 font-bold text-xs md:text-base mt-1 mb-4"></p>
+                
+                <div class="flex gap-3 justify-center">
+                    <button onclick="editFromLightbox()" class="btn-3d bg-white/10 hover:bg-white/20 text-white border-2 border-white/20 px-4 py-2.5 rounded-xl transition font-bold flex items-center gap-2 backdrop-blur-sm"><i class="fa-solid fa-pen"></i> Edit</button>
+                    <button onclick="deleteFromLightbox()" class="btn-3d bg-red-500/20 hover:bg-red-500/40 text-red-100 border-2 border-red-500/50 px-4 py-2.5 rounded-xl transition font-bold flex items-center gap-2 backdrop-blur-sm"><i class="fa-solid fa-trash"></i> Delete</button>
+                </div>
             </div>
         </div>
     </div>
@@ -411,7 +416,7 @@
         
         let activeTab = 'All';
         let editingKidId = null;
-        let editingArtId = null; // Tracks if we are editing an existing photo
+        let editingArtId = null; 
         let selectedEmoji = '👦';
         let selectedColor = 'bg-red-500';
         let selectedMood = '';
@@ -518,7 +523,7 @@
             document.getElementById('dropZoneContent').classList.remove('hidden'); 
             document.getElementById('imagePreview').classList.add('hidden'); 
             document.getElementById('imagePreview').classList.remove('flex'); 
-            document.getElementById('artImage').required = true; // force new upload if they removed the preview
+            document.getElementById('artImage').required = true; 
         }
 
         function renderTabs() {
@@ -535,7 +540,7 @@
         function setActiveTab(name) { activeTab = name; renderTabs(); renderGallery(); }
 
         // ==========================================
-        // FIXED RENDER GALLERY WITH PRE-COUNTING AND EDIT BUTTON
+        // RENDER GALLERY (WITH HOVER OVERLAY REMOVED FOR CLEANER UI)
         // ==========================================
         function renderGallery() {
             const gallery = document.getElementById('galleryGrid');
@@ -560,7 +565,6 @@
                 return;
             }
 
-            // 1. Pre-group the artwork to easily count them
             const groupedArt = [];
             filteredArt.forEach(art => {
                 let groupLabel = '';
@@ -583,7 +587,6 @@
                 existingGroup.artworks.push(art);
             });
 
-            // 2. Generate HTML from grouped data
             let html = '';
             groupedArt.forEach(group => {
                 let safeId = group.label.replace(/[^a-zA-Z0-9]/g, '-');
@@ -611,18 +614,14 @@
                     const reactionEmojis = ['❤️','😍','🔥','👏','🌟'];
                     const isFav = art.favorite;
 
+                    // Note: The ugly hover overlay is completely removed here.
                     html += `
                     <div class="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-slate-100 p-2.5 md:p-3 shadow-lg hover:-translate-y-1 transition group card-enter" style="animation-delay: ${(index % 10) * 0.05}s">
                         <div class="h-44 md:h-56 overflow-hidden rounded-xl md:rounded-2xl bg-slate-100 relative border-2 border-slate-100 cursor-pointer" onclick="openLightbox(${art.id})">
-                            <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" loading="lazy">
+                            <img src="${art.imageUrl}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" loading="lazy">
                             ${art.mood ? `<div class="absolute top-2 left-2 text-2xl bg-white/80 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">${art.mood}</div>` : ''}
                             <div class="absolute top-2 right-2">
                                 <button onclick="event.stopPropagation(); toggleFavorite(${art.id})" class="fav-star text-2xl ${isFav ? 'active' : 'text-white/60 hover:text-amber-400'} drop-shadow-lg">${isFav ? '⭐' : '☆'}</button>
-                            </div>
-                            <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
-                                <button class="btn-3d bg-white text-indigo-600 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); openLightbox(${art.id})"><i class="fa-solid fa-expand"></i></button>
-                                <button class="btn-3d bg-white text-emerald-500 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); editArt(${art.id})"><i class="fa-solid fa-pen"></i></button>
-                                <button class="btn-3d bg-white text-red-500 p-3 rounded-xl shadow-[0_4px_0_rgb(203,213,225)]" onclick="event.stopPropagation(); deleteArt(${art.id})"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
                         <div class="p-2.5 md:p-3 pt-3 md:pt-4">
@@ -648,7 +647,6 @@
             gallery.innerHTML = html;
         }
 
-        // Toggles the collapsing month grids
         function toggleGroup(gridId, iconId) {
             const grid = document.getElementById(gridId);
             const icon = document.getElementById(iconId);
@@ -681,6 +679,9 @@
             art.favorite = !art.favorite; saveArtToDB(art); renderGallery();
         }
 
+        // ==========================================
+        // LIGHTBOX VIEWER ACTIONS
+        // ==========================================
         function updateLightboxUI() {
             const art = currentGalleryView[currentLightboxIndex];
             const kidObj = kids.find(k => k.name === art.childName) || kids[0];
@@ -713,6 +714,27 @@
             }
         }
 
+        // NEW: Action buttons triggered directly from inside the Lightbox
+        function editFromLightbox() {
+            const art = currentGalleryView[currentLightboxIndex];
+            closeLightbox();
+            editArt(art.id);
+        }
+
+        function deleteFromLightbox() {
+            const art = currentGalleryView[currentLightboxIndex];
+            if(confirm("Delete this masterpiece? 🗑️")) {
+                artworks = artworks.filter(a => a.id !== art.id);
+                deleteArtFromDB(art.id);
+                renderGallery();
+                closeLightbox();
+            }
+        }
+
+
+        // ==========================================
+        // UPLOADING & EDITING
+        // ==========================================
         function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
         
         function closeUploadModal() { 
@@ -722,22 +744,17 @@
             renderMoodPicker(); 
             clearImagePreview(); 
             
-            // Reset Edit state
             editingArtId = null;
             document.getElementById('uploadModalTitle').innerText = '🎨 New Art';
             document.getElementById('uploadBtn').innerText = "Save to Archive! 🚀";
             document.getElementById('artImage').required = true;
         }
 
-        // ==========================================
-        // EDIT ART LOGIC
-        // ==========================================
         function editArt(id) {
             editingArtId = id;
             const art = artworks.find(a => a.id === id);
             if (!art) return;
 
-            // Populate form
             document.getElementById('childSelect').value = art.childName;
             document.getElementById('artDate').value = art.date;
             document.getElementById('artTheme').value = art.theme;
@@ -745,16 +762,13 @@
             selectedMood = art.mood || '';
             renderMoodPicker();
 
-            // Populate Image
             document.getElementById('previewImg').src = art.imageUrl;
             document.getElementById('dropZoneContent').classList.add('hidden');
             document.getElementById('imagePreview').classList.remove('hidden');
             document.getElementById('imagePreview').classList.add('flex');
             
-            // Make image upload optional during edit
             document.getElementById('artImage').required = false; 
 
-            // Update UI
             document.getElementById('uploadModalTitle').innerText = '✏️ Edit Art';
             document.getElementById('uploadBtn').innerText = 'Save Changes! ✨';
 
@@ -782,32 +796,28 @@
             try {
                 let downloadURL = '';
 
-                // If user selected a new file, upload it
                 if (file) {
                     const storageRef = storage.ref(`artworks/${Date.now()}_${file.name}`);
                     const snapshot = await storageRef.put(file);
                     downloadURL = await snapshot.ref.getDownloadURL();
                 } 
-                // If editing and didn't select a new file, keep the old one
                 else if (editingArtId) {
                     const existingArt = artworks.find(a => a.id === editingArtId);
                     downloadURL = existingArt.imageUrl;
                 }
 
                 if (editingArtId) {
-                    // Update existing Art
                     const artIndex = artworks.findIndex(a => a.id === editingArtId);
                     if (artIndex > -1) {
                         artworks[artIndex].childName = childName;
                         artworks[artIndex].date = artDate;
                         artworks[artIndex].theme = artTheme;
                         artworks[artIndex].mood = selectedMood;
-                        if (file) artworks[artIndex].imageUrl = downloadURL; // only overwrite URL if new file uploaded
+                        if (file) artworks[artIndex].imageUrl = downloadURL; 
                         
                         saveArtToDB(artworks[artIndex]);
                     }
                 } else {
-                    // Create New Art
                     const newArt = { 
                         id: Date.now(), 
                         childName, 
@@ -834,14 +844,9 @@
             }
         });
 
-        function deleteArt(id) { 
-            if(confirm("Delete this masterpiece? 🗑️")) { 
-                artworks = artworks.filter(a => a.id !== id); 
-                deleteArtFromDB(id);
-                renderGallery(); 
-            } 
-        }
-
+        // ==========================================
+        // MANAGE KIDS
+        // ==========================================
         function openManageModal() { document.getElementById('manageModal').classList.remove('hidden'); }
         function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); cancelEdit(); }
 
@@ -928,7 +933,7 @@
         }
 
         // ==========================================
-        // NEW GENERATOR LOGIC
+        // AI COLLAGE GENERATOR
         // ==========================================
         function openGeneratorModal(type) {
             document.getElementById('genType').value = type;
@@ -954,7 +959,6 @@
             const start = document.getElementById('genStart').value;
             const end = document.getElementById('genEnd').value;
 
-            // 1. Filter the artworks
             let filtered = [...artworks];
             if (kid !== 'All') filtered = filtered.filter(a => a.childName === kid);
 
@@ -964,7 +968,7 @@
             }
             if (end) {
                 const endDate = new Date(end);
-                endDate.setMonth(endDate.getMonth() + 1); // push to end of selected month
+                endDate.setMonth(endDate.getMonth() + 1); 
                 filtered = filtered.filter(a => new Date(a.date) < endDate);
             }
 
@@ -975,43 +979,37 @@
             btn.disabled = true;
 
             try {
-                // 2. Setup Canvas
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
                 if (type === 'wallpaper') {
                     canvas.width = 1080;
-                    canvas.height = 1920; // 9:16 vertical phone
+                    canvas.height = 1920; 
                 } else {
                     canvas.width = 2480;
-                    canvas.height = 1754; // A4 landscape print
+                    canvas.height = 1754; 
                 }
 
-                // Calculate Grid (Square-ish layout)
                 const cols = Math.ceil(Math.sqrt(filtered.length));
                 const rows = Math.ceil(filtered.length / cols);
                 const cellW = canvas.width / cols;
                 const cellH = canvas.height / rows;
 
-                // 3. Load Images via Promise
                 const imagesToDraw = await Promise.all(filtered.map(art => {
                     return new Promise((resolve) => {
                         const img = new Image();
-                        img.crossOrigin = "Anonymous"; // Crucial to prevent Canvas tainting
+                        img.crossOrigin = "Anonymous"; 
                         img.onload = () => resolve({img, art});
                         img.onerror = () => { console.warn("Failed to load:", art.imageUrl); resolve(null); };
-                        // Cache-buster to bypass stubborn browser security
                         img.src = art.imageUrl + (art.imageUrl.includes('?') ? '&' : '?') + 'cb=' + new Date().getTime();
                     });
                 }));
 
                 const validImages = imagesToDraw.filter(i => i !== null);
 
-                // Draw solid background
                 ctx.fillStyle = type === 'wallpaper' ? '#1e293b' : '#f8fafc';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                // 4. Draw each image cropped perfectly into its grid cell
                 validImages.forEach((item, index) => {
                     const c = index % cols;
                     const r = Math.floor(index / cols);
@@ -1026,7 +1024,6 @@
                     let drawX = x;
                     let drawY = y;
 
-                    // Math to object-fit: cover
                     if (imgRatio > cellRatio) {
                         drawW = cellH * imgRatio;
                         drawX = x - (drawW - cellW) / 2;
@@ -1035,7 +1032,6 @@
                         drawY = y - (drawH - cellH) / 2;
                     }
 
-                    // Clip to cell with padding
                     ctx.save();
                     ctx.beginPath();
                     ctx.roundRect ? ctx.roundRect(x + padding, y + padding, cellW - (padding*2), cellH - (padding*2), 20) : ctx.rect(x + padding, y + padding, cellW - (padding*2), cellH - (padding*2));
@@ -1043,7 +1039,6 @@
                     ctx.drawImage(item.img, drawX, drawY, drawW, drawH);
                     ctx.restore();
 
-                    // Optional label for yearbooks
                     if(type === 'yearbook') {
                         const dateStr = new Date(item.art.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
@@ -1057,7 +1052,6 @@
                     }
                 });
 
-                // 5. Download the file
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                 const link = document.createElement('a');
                 link.download = `ArtArchive_${type}_${Date.now()}.jpg`;
@@ -1076,13 +1070,11 @@
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') { closeLightbox(); closeUploadModal(); closeManageModal(); closeGeneratorModal(); }
-            // Added keyboard support for the Carousel
             if (e.key === 'ArrowLeft' && !document.getElementById('lightboxModal').classList.contains('hidden')) { prevImage(); }
             if (e.key === 'ArrowRight' && !document.getElementById('lightboxModal').classList.contains('hidden')) { nextImage(); }
         });
     </script>
     <script>
-        // Register Service Worker for App Installation
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js')
             .then(() => console.log("Service Worker Registered!"))
